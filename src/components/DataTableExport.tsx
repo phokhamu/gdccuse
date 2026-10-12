@@ -20,6 +20,7 @@ interface DataTableExportProps {
   onDeleteSchoolStaff: (id: string) => void;
   onEditDistrictStaff: (staff: DistrictStaff) => void;
   onEditSchoolStaff: (staff: SchoolStaffRecord) => void;
+  onClearAllData?: () => void;
 }
 
 export const DataTableExport: React.FC<DataTableExportProps> = ({
@@ -29,11 +30,13 @@ export const DataTableExport: React.FC<DataTableExportProps> = ({
   onDeleteSchoolStaff,
   onEditDistrictStaff,
   onEditSchoolStaff,
+  onClearAllData,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'school' | 'district'>('school');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClusterFilter, setSelectedClusterFilter] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [showClearAllModal, setShowClearAllModal] = useState(false);
 
   // Filtered School Staff
   const filteredSchoolStaff = useMemo(() => {
@@ -217,6 +220,17 @@ export const DataTableExport: React.FC<DataTableExportProps> = ({
               <Printer className="w-4 h-4" />
               <span>พิมพ์รายงานสรุป</span>
             </button>
+            {onClearAllData && (districtStaffList.length > 0 || schoolStaffList.length > 0) && (
+              <button
+                type="button"
+                onClick={() => setShowClearAllModal(true)}
+                className="px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs shadow-xs flex items-center gap-2 cursor-pointer transition-all"
+                title="ลบข้อมูลที่บันทึกทั้งหมดออกจากระบบ"
+              >
+                <Trash2 className="w-4 h-4 text-rose-600" />
+                <span>ล้างข้อมูลทั้งหมด</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -474,6 +488,39 @@ export const DataTableExport: React.FC<DataTableExportProps> = ({
                 className="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 cursor-pointer"
               >
                 ยืนยันการลบ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clear All Confirmation Modal */}
+      {showClearAllModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200">
+            <h3 className="text-lg font-bold text-slate-900">ยืนยันการล้างข้อมูลทั้งหมด?</h3>
+            <p className="text-sm text-slate-600 mt-2">
+              ระบบจะลบข้อมูลที่บันทึกไว้ทั้งหมด (ทั้งบุคลากรเขตและโรงเรียน) การดำเนินการนี้ไม่สามารถเรียกคืนได้
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowClearAllModal(false)}
+                className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-100 cursor-pointer"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onClearAllData) {
+                    onClearAllData();
+                  }
+                  setShowClearAllModal(false);
+                }}
+                className="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 cursor-pointer"
+              >
+                ยืนยันล้างข้อมูลทั้งหมด
               </button>
             </div>
           </div>

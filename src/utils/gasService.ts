@@ -10,198 +10,78 @@ export const INITIAL_GAS_CONFIG: GASConfig = {
   connected: false,
 };
 
-// Initial realistic sample data
-export const INITIAL_DISTRICT_STAFF: DistrictStaff[] = [
-  {
-    id: 'dist-001',
-    prefixTh: 'นาย',
-    firstNameTh: 'สมชาย',
-    lastNameTh: 'รักการเรียน',
-    prefixEn: 'Mr.',
-    firstNameEn: 'Somchai',
-    lastNameEn: 'Rakkarnrian',
-    email: 'somchai.p@bkn.go.th',
-    position: 'ผู้อำนวยการกลุ่ม / หัวหน้าหน่วย',
-    department: 'สำนักงานเขตพื้นที่การศึกษาประถมศึกษาบึงกาฬ (กลุ่มนโยบายและแผน)',
-    rolePermission: 'ผู้ดูแลระบบ',
-    phone: '0812345678',
-    createdAt: '2026-10-10 09:30:00',
-  },
-  {
-    id: 'dist-002',
-    prefixTh: 'นางสาว',
-    firstNameTh: 'พรทิพย์',
-    lastNameTh: 'สถิตย์ธรรม',
-    prefixEn: 'Miss',
-    firstNameEn: 'Porntip',
-    lastNameEn: 'Satittham',
-    email: 'porntip.s@bkn.go.th',
-    position: 'ศึกษานิเทศก์ชำนาญการพิเศษ / ศึกษานิเทศก์',
-    department: 'สำนักงานเขตพื้นที่การศึกษาประถมศึกษาบึงกาฬ (กลุ่มนิเทศ ติดตามฯ)',
-    rolePermission: 'ผู้ใช้งาน',
-    phone: '0898765432',
-    createdAt: '2026-10-10 10:15:00',
-  },
-  {
-    id: 'dist-003',
-    prefixTh: 'นาง',
-    firstNameTh: 'วรรณภา',
-    lastNameTh: 'แก้วประสิทธิ์',
-    prefixEn: 'Mrs.',
-    firstNameEn: 'Wannapa',
-    lastNameEn: 'Kaewprasit',
-    email: 'wannapa.k@bkn.go.th',
-    position: 'นักวิชาการเงินและบัญชี',
-    department: 'สำนักงานเขตพื้นที่การศึกษาประถมศึกษาบึงกาฬ (กลุ่มบริหารงานการเงินฯ)',
-    rolePermission: 'ผู้ใช้งาน',
-    phone: '0861112233',
-    createdAt: '2026-10-10 11:00:00',
-  },
-  {
-    id: 'dist-004',
-    prefixTh: 'นาย',
-    firstNameTh: 'วรพล',
-    lastNameTh: 'สิทธิชัย',
-    prefixEn: 'Mr.',
-    firstNameEn: 'Worapol',
-    lastNameEn: 'Sitthichai',
-    email: 'worapol.ict@bkn.go.th',
-    position: 'นักวิชาการคอมพิวเตอร์',
-    department: 'สำนักงานเขตพื้นที่การศึกษาประถมศึกษาบึงกาฬ (กลุ่ม DLICT)',
-    rolePermission: 'ผู้ดูแลระบบ',
-    phone: '0845556677',
-    createdAt: '2026-10-10 11:45:00',
-  },
-];
+// Initial sample data - empty as requested
+export const INITIAL_DISTRICT_STAFF: DistrictStaff[] = [];
+export const INITIAL_SCHOOL_STAFF: SchoolStaffRecord[] = [];
 
-export const INITIAL_SCHOOL_STAFF: SchoolStaffRecord[] = [
-  {
-    id: 'sch-001',
-    clusterId: 'cluster-muang-1',
-    clusterName: 'กลุ่มเมืองบึงกาฬ 1',
-    schoolId: '1038200001',
-    schoolName: 'โรงเรียนอนุบาลบึงกาฬ',
-    documentPrefix: 'ศธ 04321.001/',
-    directorPrefixTh: 'นาย',
-    directorFirstNameTh: 'เกรียงศักดิ์',
-    directorLastNameTh: 'วัฒนาวงศ์',
-    directorPrefixEn: 'Mr.',
-    directorFirstNameEn: 'Kriangsak',
-    directorLastNameEn: 'Wattanawong',
-    directorEmail: 'kriangsak.anuban@bkn.go.th',
-    clerkPrefixTh: 'นางสาว',
-    clerkFirstNameTh: 'อรัญญา',
-    clerkLastNameTh: 'บุญญารัตน์',
-    clerkPrefixEn: 'Miss',
-    clerkFirstNameEn: 'Aranya',
-    clerkLastNameEn: 'Boonyarat',
-    clerkEmail: 'aranya.admin@bkn.go.th',
-    createdAt: '2026-10-10 08:30:00',
-  },
-  {
-    id: 'sch-002',
-    clusterId: 'cluster-muang-1',
-    clusterName: 'กลุ่มเมืองบึงกาฬ 1',
-    schoolId: '1038200002',
-    schoolName: 'โรงเรียนวิศิษฐ์อำนวยศิลป์',
-    documentPrefix: 'ศธ 04321.002/',
-    directorPrefixTh: 'ดร.',
-    directorFirstNameTh: 'ประวิทย์',
-    directorLastNameTh: 'เลิศวิริยะ',
-    directorPrefixEn: 'Dr.',
-    directorFirstNameEn: 'Prawit',
-    directorLastNameEn: 'Lertwiriya',
-    directorEmail: 'prawit.wisit@bkn.go.th',
-    clerkPrefixTh: 'นาง',
-    clerkFirstNameTh: 'นฤมล',
-    clerkLastNameTh: 'พงษ์ศิริ',
-    clerkPrefixEn: 'Mrs.',
-    clerkFirstNameEn: 'Narumon',
-    clerkLastNameEn: 'Pongsiri',
-    clerkEmail: 'narumon.w@bkn.go.th',
-    createdAt: '2026-10-10 09:00:00',
-  },
-  {
-    id: 'sch-003',
-    clusterId: 'cluster-muang-1',
-    clusterName: 'กลุ่มเมืองบึงกาฬ 1',
-    schoolId: '1038200004',
-    schoolName: 'โรงเรียนบ้านท่าไค้',
-    documentPrefix: 'ศธ 04321.004/',
-    directorPrefixTh: 'นาย',
-    directorFirstNameTh: 'ธนากร',
-    directorLastNameTh: 'ภูวเดช',
-    directorPrefixEn: 'Mr.',
-    directorFirstNameEn: 'Thanakorn',
-    directorLastNameEn: 'Poowadech',
-    directorEmail: 'thanakorn.tk@bkn.go.th',
-    clerkPrefixTh: '',
-    clerkFirstNameTh: '',
-    clerkLastNameTh: '',
-    clerkPrefixEn: '',
-    clerkFirstNameEn: '',
-    clerkLastNameEn: '',
-    clerkEmail: '',
-    createdAt: '2026-10-10 10:00:00',
-  },
-  {
-    id: 'sch-004',
-    clusterId: 'cluster-seka-1',
-    clusterName: 'กลุ่มเซกา 1',
-    schoolId: '1038200038',
-    schoolName: 'โรงเรียนอนุบาลเซกา',
-    documentPrefix: 'ศธ 04321.038/',
-    directorPrefixTh: 'นาย',
-    directorFirstNameTh: 'ประสิทธิ์',
-    directorLastNameTh: 'สุริยวงค์',
-    directorPrefixEn: 'Mr.',
-    directorFirstNameEn: 'Prasit',
-    directorLastNameEn: 'Suriyawong',
-    directorEmail: 'prasit.seka@bkn.go.th',
-    clerkPrefixTh: 'นางสาว',
-    clerkFirstNameTh: 'กรรณิการ์',
-    clerkLastNameTh: 'มหาวรรณ',
-    clerkPrefixEn: 'Miss',
-    clerkFirstNameEn: 'Kannika',
-    clerkLastNameEn: 'Mahawan',
-    clerkEmail: 'kannika.seka@bkn.go.th',
-    createdAt: '2026-10-10 11:20:00',
-  },
-  {
-    id: 'sch-005',
-    clusterId: 'cluster-so-1',
-    clusterName: 'กลุ่มโซ่พิสัย 1',
-    schoolId: '1038200076',
-    schoolName: 'โรงเรียนอนุบาลโซ่พิสัย',
-    documentPrefix: 'ศธ 04321.076/',
-    directorPrefixTh: '',
-    directorFirstNameTh: '',
-    directorLastNameTh: '',
-    directorPrefixEn: '',
-    directorFirstNameEn: '',
-    directorLastNameEn: '',
-    directorEmail: '',
-    clerkPrefixTh: 'นางสาว',
-    clerkFirstNameTh: 'จิราภรณ์',
-    clerkLastNameTh: 'มิตรภาพ',
-    clerkPrefixEn: 'Miss',
-    clerkFirstNameEn: 'Jiraporn',
-    clerkLastNameEn: 'Mittraphap',
-    clerkEmail: 'jiraporn.so@bkn.go.th',
-    createdAt: '2026-10-10 13:00:00',
-  },
-];
+// Marker to purge legacy sample/mock data from previous versions
+const SAMPLE_PURGED_KEY = 'bkn_samples_purged_v2';
+
+const MOCK_EMAILS = new Set([
+  'somchai.p@bkn.go.th',
+  'porntip.s@bkn.go.th',
+  'wannapa.k@bkn.go.th',
+  'worapol.ict@bkn.go.th',
+  'kriangsak.anuban@bkn.go.th',
+  'prawit.wisit@bkn.go.th',
+  'thanakorn.tk@bkn.go.th',
+  'prasit.seka@bkn.go.th',
+  'jiraporn.so@bkn.go.th',
+  'prawit.thakai@bkn.go.th',
+  'sompong.seka@bkn.go.th',
+  'thanakorn.huaykhom@bkn.go.th',
+  'aranya.admin@bkn.go.th',
+  'narumon.w@bkn.go.th',
+  'kannika.seka@bkn.go.th',
+  'kannika.admin@bkn.go.th',
+  'jiraporn.so@bkn.go.th',
+  'supansa.admin@bkn.go.th',
+]);
+
+const MOCK_IDS = new Set([
+  'dist-001',
+  'dist-002',
+  'dist-003',
+  'dist-004',
+  'sch-001',
+  'sch-002',
+  'sch-003',
+  'sch-004',
+  'sch-005',
+  'sch-43030037',
+  'sch-43030029',
+  'sch-43030085',
+  'sch-43030084',
+]);
+
+function filterOutSampleDistrictStaff(list: DistrictStaff[]): DistrictStaff[] {
+  return list.filter((item) => !MOCK_IDS.has(item.id) && !MOCK_EMAILS.has(item.email));
+}
+
+function filterOutSampleSchoolStaff(list: SchoolStaffRecord[]): SchoolStaffRecord[] {
+  return list.filter(
+    (item) =>
+      !MOCK_IDS.has(item.id) &&
+      !MOCK_EMAILS.has(item.directorEmail) &&
+      !MOCK_EMAILS.has(item.clerkEmail)
+  );
+}
 
 export function loadDistrictStaffFromStorage(): DistrictStaff[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_DISTRICT);
-    if (!raw) {
-      saveDistrictStaffToStorage(INITIAL_DISTRICT_STAFF);
-      return INITIAL_DISTRICT_STAFF;
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    
+    // Purge mock entries if first time on v2
+    const filtered = filterOutSampleDistrictStaff(parsed);
+    if (localStorage.getItem(SAMPLE_PURGED_KEY) !== 'true') {
+      saveDistrictStaffToStorage(filtered);
     }
-    return JSON.parse(raw);
+    return filtered;
   } catch {
-    return INITIAL_DISTRICT_STAFF;
+    return [];
   }
 }
 
@@ -216,13 +96,19 @@ export function saveDistrictStaffToStorage(data: DistrictStaff[]): void {
 export function loadSchoolStaffFromStorage(): SchoolStaffRecord[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_SCHOOL);
-    if (!raw) {
-      saveSchoolStaffToStorage(INITIAL_SCHOOL_STAFF);
-      return INITIAL_SCHOOL_STAFF;
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    // Purge mock entries if first time on v2
+    const filtered = filterOutSampleSchoolStaff(parsed);
+    if (localStorage.getItem(SAMPLE_PURGED_KEY) !== 'true') {
+      saveSchoolStaffToStorage(filtered);
+      localStorage.setItem(SAMPLE_PURGED_KEY, 'true');
     }
-    return JSON.parse(raw);
+    return filtered;
   } catch {
-    return INITIAL_SCHOOL_STAFF;
+    return [];
   }
 }
 

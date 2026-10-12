@@ -60,12 +60,25 @@ export default function App() {
         setSchoolStaffList(serverData.schoolStaff);
         saveDistrictStaffToStorage(serverData.districtStaff);
         saveSchoolStaffToStorage(serverData.schoolStaff);
+      } else if (serverData) {
+        // Server responded with clean empty lists
+        const dStaff = loadDistrictStaffFromStorage();
+        const sStaff = loadSchoolStaffFromStorage();
+        if (dStaff.length > 0 || sStaff.length > 0) {
+          setDistrictStaffList(dStaff);
+          setSchoolStaffList(sStaff);
+          syncAllToServer(dStaff, sStaff);
+        } else {
+          setDistrictStaffList([]);
+          setSchoolStaffList([]);
+          saveDistrictStaffToStorage([]);
+          saveSchoolStaffToStorage([]);
+        }
       } else {
         const dStaff = loadDistrictStaffFromStorage();
         const sStaff = loadSchoolStaffFromStorage();
         setDistrictStaffList(dStaff);
         setSchoolStaffList(sStaff);
-        syncAllToServer(dStaff, sStaff);
       }
       const config = loadGASConfig();
       setGasConfig(config);
@@ -139,6 +152,14 @@ export default function App() {
       saveSchoolStaffToStorage(updated);
       return updated;
     });
+  };
+
+  const handleClearAllData = async () => {
+    setDistrictStaffList([]);
+    setSchoolStaffList([]);
+    saveDistrictStaffToStorage([]);
+    saveSchoolStaffToStorage([]);
+    await syncAllToServer([], []);
   };
 
   // Edit actions initiated from Back Office
@@ -249,6 +270,7 @@ export default function App() {
             onDeleteSchoolStaff={handleDeleteSchoolStaff}
             onEditDistrictStaff={handleEditDistrictStaff}
             onEditSchoolStaff={handleEditSchoolStaff}
+            onClearAllData={handleClearAllData}
             onLogoutAdmin={handleAdminLogout}
             onReturnToUserPortal={() => setCurrentPortal('user')}
           />

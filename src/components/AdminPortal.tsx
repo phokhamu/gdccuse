@@ -31,6 +31,7 @@ interface AdminPortalProps {
   onDeleteSchoolStaff: (id: string) => void;
   onEditDistrictStaff: (staff: DistrictStaff) => void;
   onEditSchoolStaff: (staff: SchoolStaffRecord) => void;
+  onClearAllData?: () => void;
   onLogoutAdmin: () => void;
   onReturnToUserPortal: () => void;
 }
@@ -47,6 +48,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   onDeleteSchoolStaff,
   onEditDistrictStaff,
   onEditSchoolStaff,
+  onClearAllData,
   onLogoutAdmin,
   onReturnToUserPortal,
 }) => {
@@ -235,6 +237,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           onDeleteSchoolStaff={onDeleteSchoolStaff}
           onEditDistrictStaff={onEditDistrictStaff}
           onEditSchoolStaff={onEditSchoolStaff}
+          onClearAllData={onClearAllData}
         />
       )}
 
