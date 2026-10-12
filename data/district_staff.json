@@ -1,0 +1,62 @@
+[
+  {
+    "id": "dist-001",
+    "prefixTh": "นาย",
+    "firstNameTh": "สมชาย",
+    "lastNameTh": "รักการเรียน",
+    "prefixEn": "Mr.",
+    "firstNameEn": "Somchai",
+    "lastNameEn": "Rakkarnrian",
+    "email": "somchai.p@bkn.go.th",
+    "position": "ผู้อำนวยการกลุ่ม / หัวหน้าหน่วย",
+    "department": "สำนักงานเขตพื้นที่การศึกษาประถมศึกษาบึงกาฬ (กลุ่มนโยบายและแผน)",
+    "rolePermission": "ผู้ดูแลระบบ",
+    "phone": "0812345678",
+    "createdAt": "2026-10-10 09:30:00"
+  },
+  {
+    "id": "dist-002",
+    "prefixTh": "นางสาว",
+    "firstNameTh": "พรทิพย์",
+    "lastNameTh": "สถิตย์ธรรม",
+    "prefixEn": "Miss",
+    "firstNameEn": "Porntip",
+    "lastNameEn": "Satittham",
+    "email": "porntip.s@bkn.go.th",
+    "position": "ศึกษานิเทศก์ชำนาญการพิเศษ / ศึกษานิเทศก์",
+    "department": "สำนักงานเขตพื้นที่การศึกษาประถมศึกษาบึงกาฬ (กลุ่มนิเทศ ติดตามฯ)",
+    "rolePermission": "ผู้ใช้งาน",
+    "phone": "0898765432",
+    "createdAt": "2026-10-10 10:15:00"
+  },
+  {
+    "id": "dist-003",
+    "prefixTh": "นาง",
+    "firstNameTh": "วรรณภา",
+    "lastNameTh": "แก้วประสิทธิ์",
+    "prefixEn": "Mrs.",
+    "firstNameEn": "Wannapa",
+    "lastNameEn": "Kaewprasit",
+    "email": "wannapa.k@bkn.go.th",
+    "position": "นักวิชาการเงินและบัญชี",
+    "department": "สำนักงานเขตพื้นที่การศึกษาประถมศึกษาบึงกาฬ (กลุ่มบริหารงานการเงินฯ)",
+    "rolePermission": "ผู้ใช้งาน",
+    "phone": "0861112233",
+    "createdAt": "2026-10-10 11:00:00"
+  },
+  {
+    "id": "dist-004",
+    "prefixTh": "นาย",
+    "firstNameTh": "วรพล",
+    "lastNameTh": "สิทธิชัย",
+    "prefixEn": "Mr.",
+    "firstNameEn": "Worapol",
+    "lastNameEn": "Sitthichai",
+    "email": "worapol.ict@bkn.go.th",
+    "position": "นักวิชาการคอมพิวเตอร์",
+    "department": "สำนักงานเขตพื้นที่การศึกษาประถมศึกษาบึงกาฬ (กลุ่ม DLICT)",
+    "rolePermission": "ผู้ดูแลระบบ",
+    "phone": "0845556677",
+    "createdAt": "2026-10-10 11:45:00"
+  }
+]

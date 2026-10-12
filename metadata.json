@@ -1,0 +1,6 @@
+{
+  "name": "ระบบจัดเก็บข้อมูลและรายงานผล สพป.บึงกาฬ",
+  "description": "ระบบฟอร์มบันทึกข้อมูลผู้ใช้งานเขตและข้อมูลโรงเรียนในสังกัด สพป.บึงกาฬ เชื่อมต่อ Google Sheets/Google Apps Script พร้อมระบบตรวจสอบข้อมูลซ้ำและแดชบอร์ดสรุปผล",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
