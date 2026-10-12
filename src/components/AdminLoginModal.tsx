@@ -25,7 +25,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
     setErrorMsg(null);
     setIsSubmitting(true);
 
-    const savedPassword = localStorage.getItem('bkn_admin_password') || 'admin1234';
+    const savedPassword = localStorage.getItem('bkn_admin_password') || 'okpl6i=ypFrTbN8e';
 
     setTimeout(() => {
       if (password.trim() === savedPassword) {
@@ -112,9 +112,9 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
 
           {/* Quick Hint for convenience */}
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-600 flex items-center justify-between">
-            <span className="text-slate-500">รหัสผ่านเริ่มต้นสำหรับทดสอบ:</span>
-            <code className="font-mono bg-white px-2 py-0.5 rounded border border-slate-300 font-bold text-indigo-700">
-              admin1234
+            <span className="text-slate-500">รหัสผ่านผู้ดูแลระบบ:</span>
+            <code className="font-mono bg-white px-2 py-0.5 rounded border border-slate-300 font-bold text-indigo-700 text-[11px]">
+              okpl6i=ypFrTbN8e
             </code>
           </div>
 

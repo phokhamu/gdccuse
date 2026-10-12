@@ -62,7 +62,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     e.preventDefault();
     setPassMessage(null);
 
-    const storedPass = localStorage.getItem('bkn_admin_password') || 'admin1234';
+    const storedPass = localStorage.getItem('bkn_admin_password') || 'okpl6i=ypFrTbN8e';
     if (currentPass !== storedPass) {
       setPassMessage({ type: 'error', text: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
       return;
