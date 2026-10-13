@@ -110,13 +110,6 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
             </div>
           </div>
 
-          {/* Quick Hint for convenience */}
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-600 flex items-center justify-between">
-            <span className="text-slate-500">รหัสผ่านผู้ดูแลระบบ:</span>
-            <code className="font-mono bg-white px-2 py-0.5 rounded border border-slate-300 font-bold text-indigo-700 text-[11px]">
-              okpl6i=ypFrTbN8e
-            </code>
-          </div>
 
           {errorMsg && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2.5 rounded-xl text-xs flex items-center gap-2">

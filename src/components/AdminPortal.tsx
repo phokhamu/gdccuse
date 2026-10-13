@@ -276,7 +276,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 required
                 value={currentPass}
                 onChange={(e) => setCurrentPass(e.target.value)}
-                placeholder="ระบุรหัสผ่านเดิม (เริ่มต้นคือ admin1234)"
+                placeholder="ระบุรหัสผ่านเดิม"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>

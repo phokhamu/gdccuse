@@ -144,10 +144,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
     });
   }, [schoolStaffMap]);
 
-  // District Staff Department Breakdown
   const departmentStats = useMemo(() => {
     return DISTRICT_DEPARTMENTS.map((dept) => {
-      const count = districtStaffList.filter((s) => s.department === dept).length;
+      const count = districtStaffList.filter(
+        (s) => s.department === dept || (s.department && s.department.includes(dept))
+      ).length;
       return { department: dept, count };
     });
   }, [districtStaffList]);
@@ -310,7 +311,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div>
             <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-blue-700" />
-              <span>ความคืบหน้าจำแนกตามกลุ่มโรงเรียน / กลุ่มพัฒนาคุณภาพการศึกษา (17 กลุ่ม)</span>
+              <span>ความคืบหน้าจำแนกตามกลุ่มโรงเรียน / กลุ่มพัฒนาคุณภาพการศึกษา (23 กลุ่ม)</span>
             </h3>
             <p className="text-xs text-slate-500">
               คลิกที่กลุ่มโรงเรียนเพื่อกรองตารางโรงเรียนด้านล่างทันที
@@ -407,7 +408,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 onChange={(e) => setClusterFilter(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs cursor-pointer"
               >
-                <option value="">-- กรองทุกกลุ่มโรงเรียน (17 กลุ่ม) --</option>
+                <option value="">-- กรองทุกกลุ่มโรงเรียน (23 กลุ่ม) --</option>
                 {SCHOOL_CLUSTERS.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name} ({c.district})

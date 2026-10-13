@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   THAI_PREFIXES,
   ENGLISH_PREFIXES,
@@ -39,6 +39,13 @@ export const DistrictStaffForm: React.FC<DistrictStaffFormProps> = ({
   editingStaff,
   onCancelEdit,
 }) => {
+  // Resolve department from staff if editing
+  const resolveInitialDepartment = (staff?: DistrictStaff | null) => {
+    if (!staff?.department) return '';
+    const match = DISTRICT_DEPARTMENTS.find((d) => staff.department.includes(d));
+    return match || staff.department;
+  };
+
   // Form Fields exactly matching user Google Sheets specifications
   const [prefixTh, setPrefixTh] = useState<string>(editingStaff?.prefixTh || 'นาย');
   const [firstNameTh, setFirstNameTh] = useState<string>(editingStaff?.firstNameTh || '');
@@ -54,9 +61,7 @@ export const DistrictStaffForm: React.FC<DistrictStaffFormProps> = ({
   const [position, setPosition] = useState<string>(editingStaff?.position || DISTRICT_POSITIONS[2]);
   const [customPosition, setCustomPosition] = useState<string>('');
 
-  const [department, setDepartment] = useState<string>(
-    editingStaff?.department || `${ORGANIZATION_INFO.name} (${DISTRICT_DEPARTMENTS[0]})`
-  );
+  const [department, setDepartment] = useState<string>(() => resolveInitialDepartment(editingStaff));
 
   const [rolePermission, setRolePermission] = useState<'ผู้ใช้งาน' | 'ผู้ดูแลระบบ'>(
     editingStaff?.rolePermission || 'ผู้ใช้งาน'
@@ -66,6 +71,28 @@ export const DistrictStaffForm: React.FC<DistrictStaffFormProps> = ({
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
   const [showDuplicateModal, setShowDuplicateModal] = useState<DuplicateCheckResult | null>(null);
+
+  // Sync state if editingStaff prop changes
+  useEffect(() => {
+    if (editingStaff) {
+      setPrefixTh(editingStaff.prefixTh || 'นาย');
+      setFirstNameTh(editingStaff.firstNameTh || '');
+      setLastNameTh(editingStaff.lastNameTh || '');
+      setPrefixEn(editingStaff.prefixEn || suggestEnglishPrefix(editingStaff.prefixTh || 'นาย'));
+      setFirstNameEn(editingStaff.firstNameEn || '');
+      setLastNameEn(editingStaff.lastNameEn || '');
+      setEmail(editingStaff.email || '');
+      if (DISTRICT_POSITIONS.includes(editingStaff.position as any)) {
+        setPosition(editingStaff.position);
+        setCustomPosition('');
+      } else {
+        setPosition('อื่นๆ');
+        setCustomPosition(editingStaff.position);
+      }
+      setDepartment(resolveInitialDepartment(editingStaff));
+      setRolePermission(editingStaff.rolePermission || 'ผู้ใช้งาน');
+    }
+  }, [editingStaff]);
 
   // Auto update English prefix when Thai prefix changes
   const handleThaiPrefixChange = (val: string) => {
@@ -79,7 +106,9 @@ export const DistrictStaffForm: React.FC<DistrictStaffFormProps> = ({
     setFirstNameEn('');
     setLastNameEn('');
     setEmail('');
+    setPosition(DISTRICT_POSITIONS[2]);
     setCustomPosition('');
+    setDepartment('');
     setSuccessBanner(null);
     setErrorBanner(null);
     setShowDuplicateModal(null);
@@ -422,14 +451,22 @@ export const DistrictStaffForm: React.FC<DistrictStaffFormProps> = ({
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 สังกัด / ชื่อหน่วยงาน *จำเป็นต้องกรอก
               </label>
-              <input
-                type="text"
-                placeholder="เช่น สำนักงานเขตพื้นที่การศึกษาประถมศึกษาบึงกาฬ (กลุ่มนโยบายและแผน)"
+              <select
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                 required
-              />
+              >
+                <option value="">-- กรุณาเลือกสังกัด / ชื่อหน่วยงาน --</option>
+                {DISTRICT_DEPARTMENTS.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
+                ))}
+                {department && !DISTRICT_DEPARTMENTS.includes(department as any) && (
+                  <option value={department}>{department}</option>
+                )}
+              </select>
             </div>
           </div>
 
