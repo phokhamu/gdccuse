@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ALL_SCHOOLS, SCHOOL_CLUSTERS } from '../data/schoolsData';
 import { DISTRICT_DEPARTMENTS, ORGANIZATION_INFO } from '../data/organization';
-import { SchoolStaffRecord, DistrictStaff } from '../types';
+import { SchoolStaffRecord, DistrictStaff, GASConfig } from '../types';
 import {
   Users,
   School,
@@ -16,6 +16,7 @@ import {
   ChevronRight,
   TrendingUp,
   Lock,
+  RefreshCw,
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -25,6 +26,10 @@ interface DashboardProps {
   onNavigateToDistrictForm: () => void;
   isAdmin?: boolean;
   onOpenAdminLogin?: () => void;
+  isSyncingGAS?: boolean;
+  lastSyncTime?: string;
+  onRefreshFromGAS?: () => Promise<void>;
+  gasConfig?: GASConfig;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -34,6 +39,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onNavigateToDistrictForm,
   isAdmin = false,
   onOpenAdminLogin,
+  isSyncingGAS = false,
+  lastSyncTime = '',
+  onRefreshFromGAS,
+  gasConfig,
 }) => {
   // Search & Filters for School Table
   const [searchTerm, setSearchTerm] = useState('');
@@ -185,11 +194,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className="bg-white rounded-2xl p-6 shadow-xs border border-slate-200">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-100">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
                 Dashboard สรุปผลภาพรวม
               </span>
-              <span className="text-xs text-slate-500">ข้อมูลแบบ Real-time</span>
+              {isSyncingGAS ? (
+                <span className="text-xs text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1.5 animate-pulse">
+                  <RefreshCw className="w-3 h-3 animate-spin text-teal-600" />
+                  <span>กำลังดึงข้อมูลล่าสุดจาก Google Sheets...</span>
+                </span>
+              ) : gasConfig?.webAppUrl ? (
+                <span className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>ดึงข้อมูลจาก Google Sheets แล้ว {lastSyncTime ? `(อัปเดต ${lastSyncTime})` : ''}</span>
+                </span>
+              ) : (
+                <span className="text-xs text-slate-500">ข้อมูลแบบ Real-time</span>
+              )}
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-800 mt-1">
               สรุปความคืบหน้าการจัดเก็บข้อมูล {ORGANIZATION_INFO.shortName}
@@ -199,7 +220,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {onRefreshFromGAS && gasConfig?.webAppUrl && (
+              <button
+                onClick={() => onRefreshFromGAS()}
+                disabled={isSyncingGAS}
+                className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-2xs"
+                title="ดึงข้อมูลล่าสุดจาก Google Sheets ทันที"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingGAS ? 'animate-spin text-teal-600' : 'text-slate-600'}`} />
+                <span>{isSyncingGAS ? 'กำลังดึง...' : 'ดึงข้อมูลจาก Sheets'}</span>
+              </button>
+            )}
+
             <button
               onClick={() => onNavigateToSchoolForm()}
               className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-sm font-bold shadow-xs hover:shadow-md transition-all flex items-center gap-2 cursor-pointer"

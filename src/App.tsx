@@ -60,43 +60,99 @@ export default function App() {
 
   const [isSyncingGAS, setIsSyncingGAS] = useState<boolean>(false);
   const [gasSyncStatus, setGasSyncStatus] = useState<string | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<string>('');
 
-  // Load from server, GAS, or localStorage on mount
+  // Function to refresh from Google Apps Script
+  const handleRefreshFromGAS = async (showBanner = true) => {
+    if (!gasConfig.webAppUrl) {
+      if (showBanner) {
+        setGasSyncStatus('ยังไม่ได้ระบุ Google Apps Script Web App URL');
+        setTimeout(() => setGasSyncStatus(null), 4000);
+      }
+      return;
+    }
+    setIsSyncingGAS(true);
+    if (showBanner) setGasSyncStatus(null);
+    try {
+      const gasData = await loadDataFromGAS(gasConfig.webAppUrl);
+      if (gasData) {
+        setDistrictStaffList(gasData.districtStaff);
+        setSchoolStaffList(gasData.schoolStaff);
+        saveDistrictStaffToStorage(gasData.districtStaff);
+        saveSchoolStaffToStorage(gasData.schoolStaff);
+        const timeStr = new Date().toLocaleTimeString('th-TH');
+        setLastSyncTime(timeStr);
+        if (showBanner) {
+          setGasSyncStatus(`ดึงข้อมูลจาก Google Sheets สำเร็จ! (${gasData.districtStaff.length} ผู้ใช้งานเขต, ${gasData.schoolStaff.length} โรงเรียน)`);
+        }
+      } else if (showBanner) {
+        setGasSyncStatus('ไม่สามารถดึงข้อมูลจาก Google Sheets ได้ โปรดตรวจสอบ Web App URL');
+      }
+    } catch {
+      if (showBanner) {
+        setGasSyncStatus('เกิดข้อผิดพลาดในการเชื่อมต่อ Google Sheets');
+      }
+    } finally {
+      setIsSyncingGAS(false);
+      if (showBanner) {
+        setTimeout(() => setGasSyncStatus(null), 5000);
+      }
+    }
+  };
+
+  // Load from Google Sheets immediately on page load
   useEffect(() => {
     async function initData() {
       const config = loadGASConfig();
       setGasConfig(config);
 
-      // 1. Try server first (when running with Express backend)
+      // 1. Immediately show cached data so UI is instantly visible
+      const dStaff = loadDistrictStaffFromStorage();
+      const sStaff = loadSchoolStaffFromStorage();
+      if (dStaff.length > 0 || sStaff.length > 0) {
+        setDistrictStaffList(dStaff);
+        setSchoolStaffList(sStaff);
+      }
+
+      // 2. Fetch fresh data directly from Google Sheets immediately on page access
+      if (config.webAppUrl) {
+        setIsSyncingGAS(true);
+        try {
+          const gasData = await loadDataFromGAS(config.webAppUrl);
+          if (gasData) {
+            setDistrictStaffList(gasData.districtStaff);
+            setSchoolStaffList(gasData.schoolStaff);
+            saveDistrictStaffToStorage(gasData.districtStaff);
+            saveSchoolStaffToStorage(gasData.schoolStaff);
+            setLastSyncTime(new Date().toLocaleTimeString('th-TH'));
+            setIsSyncingGAS(false);
+            return;
+          }
+        } catch (e) {
+          console.warn('Initial GAS load failed:', e);
+        } finally {
+          setIsSyncingGAS(false);
+        }
+      }
+
+      // 3. Fallback to server if GAS is not configured or failed
       const serverData = await loadAllFromServer();
       if (serverData && (serverData.districtStaff.length > 0 || serverData.schoolStaff.length > 0)) {
         setDistrictStaffList(serverData.districtStaff);
         setSchoolStaffList(serverData.schoolStaff);
         saveDistrictStaffToStorage(serverData.districtStaff);
         saveSchoolStaffToStorage(serverData.schoolStaff);
-        return;
       }
-
-      // 2. If running on GitHub Pages (or server is empty/offline) and Google Apps Script URL exists
-      if (config.webAppUrl) {
-        const gasData = await loadDataFromGAS(config.webAppUrl);
-        if (gasData && (gasData.districtStaff.length > 0 || gasData.schoolStaff.length > 0)) {
-          setDistrictStaffList(gasData.districtStaff);
-          setSchoolStaffList(gasData.schoolStaff);
-          saveDistrictStaffToStorage(gasData.districtStaff);
-          saveSchoolStaffToStorage(gasData.schoolStaff);
-          return;
-        }
-      }
-
-      // 3. Fallback to localStorage
-      const dStaff = loadDistrictStaffFromStorage();
-      const sStaff = loadSchoolStaffFromStorage();
-      setDistrictStaffList(dStaff);
-      setSchoolStaffList(sStaff);
     }
     initData();
   }, []);
+
+  // When viewing/switching to Dashboard, auto-fetch latest Google Sheets data
+  useEffect(() => {
+    if (activeUserTab === 'dashboard' && currentPortal === 'user' && gasConfig.webAppUrl) {
+      handleRefreshFromGAS(false);
+    }
+  }, [activeUserTab, currentPortal, gasConfig.webAppUrl]);
 
   const handleRefreshFromServer = async () => {
     const serverData = await loadAllFromServer();
@@ -109,34 +165,7 @@ export default function App() {
     }
     // If server is not present (GitHub Pages), refresh from GAS
     if (gasConfig.webAppUrl) {
-      await handleRefreshFromGAS();
-    }
-  };
-
-  const handleRefreshFromGAS = async () => {
-    if (!gasConfig.webAppUrl) {
-      setGasSyncStatus('ยังไม่ได้ระบุ Google Apps Script Web App URL');
-      setTimeout(() => setGasSyncStatus(null), 4000);
-      return;
-    }
-    setIsSyncingGAS(true);
-    setGasSyncStatus(null);
-    try {
-      const gasData = await loadDataFromGAS(gasConfig.webAppUrl);
-      if (gasData) {
-        setDistrictStaffList(gasData.districtStaff);
-        setSchoolStaffList(gasData.schoolStaff);
-        saveDistrictStaffToStorage(gasData.districtStaff);
-        saveSchoolStaffToStorage(gasData.schoolStaff);
-        setGasSyncStatus(`ดึงข้อมูลจาก Google Sheets สำเร็จ! (${gasData.districtStaff.length} ผู้ใช้งานเขต, ${gasData.schoolStaff.length} โรงเรียน)`);
-      } else {
-        setGasSyncStatus('ไม่สามารถดึงข้อมูลจาก Google Sheets ได้ โปรดตรวจสอบ Web App URL');
-      }
-    } catch {
-      setGasSyncStatus('เกิดข้อผิดพลาดในการเชื่อมต่อ Google Sheets');
-    } finally {
-      setIsSyncingGAS(false);
-      setTimeout(() => setGasSyncStatus(null), 5000);
+      await handleRefreshFromGAS(true);
     }
   };
 
@@ -335,7 +364,7 @@ export default function App() {
               <span>ระบบเชื่อมต่อบันทึกข้อมูลเข้า Google Sheets แบบ Cloud Database เรียบร้อยแล้ว</span>
             </div>
             <button
-              onClick={handleRefreshFromGAS}
+              onClick={() => handleRefreshFromGAS(true)}
               disabled={isSyncingGAS}
               className="flex items-center gap-1.5 font-bold text-teal-800 hover:text-teal-950 bg-white px-3 py-1.5 rounded-lg border border-teal-200 shadow-2xs hover:shadow-xs transition-all cursor-pointer self-start sm:self-auto disabled:opacity-60"
             >
@@ -418,6 +447,10 @@ export default function App() {
                 onNavigateToDistrictForm={handleNavigateToDistrictForm}
                 isAdmin={isAdminLoggedIn}
                 onOpenAdminLogin={() => setShowAdminLoginModal(true)}
+                isSyncingGAS={isSyncingGAS}
+                lastSyncTime={lastSyncTime}
+                onRefreshFromGAS={() => handleRefreshFromGAS(true)}
+                gasConfig={gasConfig}
               />
             )}
 
