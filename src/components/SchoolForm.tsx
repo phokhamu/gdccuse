@@ -24,6 +24,9 @@ import {
   FileText,
   Globe,
   ExternalLink,
+  Lock,
+  KeyRound,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface SchoolFormProps {
@@ -32,6 +35,9 @@ interface SchoolFormProps {
   gasConfig: GASConfig;
   initialSchoolId?: string;
   onViewSchoolInDashboard?: (schoolId: string) => void;
+  isAdmin?: boolean;
+  verifiedSchoolIds?: Set<string>;
+  onVerifySchool?: (schoolId: string) => void;
 }
 
 export const SchoolForm: React.FC<SchoolFormProps> = ({
@@ -40,7 +46,13 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
   gasConfig,
   initialSchoolId,
   onViewSchoolInDashboard,
+  isAdmin = false,
+  verifiedSchoolIds,
+  onVerifySchool,
 }) => {
+  // Inline SMIS unlock states for protected school records
+  const [inlineSmisCode, setInlineSmisCode] = useState<string>('');
+  const [inlineSmisError, setInlineSmisError] = useState<string | null>(null);
   // Cascading Filter States
   const [selectedClusterId, setSelectedClusterId] = useState<string>('');
   const [selectedSchoolId, setSelectedSchoolId] = useState<string>('');
@@ -150,6 +162,27 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
     setSuccessBanner(null);
     setErrorBanner(null);
   }, [selectedSchoolId, existingSchoolRecord, currentSchool]);
+
+  // Check if existing record is locked by SMIS
+  const isSchoolLocked = useMemo(() => {
+    if (!currentSchool) return false;
+    if (!existingSchoolRecord) return false;
+    if (isAdmin) return false;
+    if (verifiedSchoolIds && verifiedSchoolIds.has(currentSchool.id)) return false;
+    return true;
+  }, [currentSchool, existingSchoolRecord, isAdmin, verifiedSchoolIds]);
+
+  const handleInlineUnlock = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentSchool) return;
+    setInlineSmisError(null);
+    if (inlineSmisCode.trim() === currentSchool.id) {
+      if (onVerifySchool) onVerifySchool(currentSchool.id);
+      setInlineSmisCode('');
+    } else {
+      setInlineSmisError('รหัส SMIS ไม่ถูกต้อง กรุณาตรวจสอบรหัสประจำโรงเรียน 8 หลักของท่านอีกครั้ง');
+    }
+  };
 
   // Reset school when cluster changes
   const handleClusterChange = (newClusterId: string) => {
@@ -317,6 +350,9 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
 
       // 3. บันทึกใน React state
       onSaveSuccess(newRecord);
+      if (onVerifySchool) {
+        onVerifySchool(newRecord.schoolId);
+      }
 
       // Confetti celebration
       try {
@@ -474,10 +510,17 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
             </div>
 
             {existingSchoolRecord ? (
-              <span className="text-xs bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-bold flex items-center gap-1 self-start sm:self-auto">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                มีข้อมูลในระบบแล้ว (แก้ไขด้านล่าง)
-              </span>
+              isSchoolLocked ? (
+                <span className="text-xs bg-amber-100 text-amber-900 border border-amber-300 px-3 py-1 rounded-full font-bold flex items-center gap-1.5 self-start sm:self-auto">
+                  <Lock className="w-3.5 h-3.5 text-amber-700" />
+                  บันทึกข้อมูลแล้ว (ล็อกด้วยรหัส SMIS)
+                </span>
+              ) : (
+                <span className="text-xs bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-bold flex items-center gap-1 self-start sm:self-auto">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  {isAdmin ? 'มีข้อมูลในระบบแล้ว (โหมดผู้ดูแลระบบ)' : 'ปลดล็อกข้อมูลแล้ว (พร้อมแก้ไข)'}
+                </span>
+              )
             ) : (
               <span className="text-xs bg-amber-100 text-amber-800 px-3 py-1 rounded-full font-bold self-start sm:self-auto">
                 ยังไม่มีข้อมูล (กรอกใหม่ด้านล่าง)
@@ -487,8 +530,62 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
         )}
       </div>
 
-      {/* Main Form Card */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-5 sm:p-7 shadow-xs border border-slate-200 space-y-6">
+      {/* If School is Locked by SMIS Code */}
+      {isSchoolLocked ? (
+        <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-amber-200 text-center max-w-lg mx-auto space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700 mx-auto shadow-inner">
+            <Lock className="w-7 h-7" />
+          </div>
+          <div>
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-800 bg-amber-100/70 px-2.5 py-0.5 rounded-full border border-amber-300">
+              ข้อมูลถูกล็อกความปลอดภัย
+            </span>
+            <h3 className="text-lg font-bold text-slate-800 mt-2">
+              ข้อมูลของ {currentSchool?.name} ได้รับการบันทึกแล้ว
+            </h3>
+            <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+              เพื่อความปลอดภัยและความเป็นส่วนตัวของข้อมูล กรุณาระบุรหัสประจำโรงเรียน (รหัส SMIS 8 หลัก) ของโรงเรียนท่านเพื่อปลดล็อกการเข้าดูและแก้ไขข้อมูล
+            </p>
+          </div>
+
+          <form onSubmit={handleInlineUnlock} className="space-y-3 pt-2">
+            <div className="flex flex-col sm:flex-row gap-2 max-w-sm mx-auto">
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={8}
+                placeholder="รหัส SMIS 8 หลัก เช่น 4303xxxx"
+                value={inlineSmisCode}
+                onChange={(e) => {
+                  setInlineSmisCode(e.target.value.replace(/\D/g, ''));
+                  setInlineSmisError(null);
+                }}
+                className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono tracking-wider focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+              />
+              <button
+                type="submit"
+                className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>ปลดล็อกเพื่อแก้ไข</span>
+              </button>
+            </div>
+
+            {inlineSmisError && (
+              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center justify-center gap-1.5 animate-shake">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>{inlineSmisError}</span>
+              </div>
+            )}
+
+            <p className="text-[11px] text-slate-400 pt-1">
+              💡 หมายเหตุ: รหัส SMIS คือรหัสสถานศึกษา 8 หลักที่ใช้ในระบบของ สพฐ.
+            </p>
+          </form>
+        </div>
+      ) : (
+        /* Main Form Card */
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-5 sm:p-7 shadow-xs border border-slate-200 space-y-6">
         {/* Success Banner */}
         {successBanner && (
           <div className="bg-emerald-50 border border-emerald-300 text-emerald-900 p-4 rounded-xl flex items-start gap-3 animate-fadeIn">
@@ -816,6 +913,7 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
           </button>
         </div>
       </form>
+      )}
 
       {/* Duplicate Alert Modal */}
       {showDuplicateModal && (

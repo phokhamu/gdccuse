@@ -62,6 +62,27 @@ export default function App() {
   const [gasSyncStatus, setGasSyncStatus] = useState<string | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<string>('');
 
+  // Verified School IDs for SMIS unlocking (แนวทางที่ 1 • รหัสแบบ A)
+  const [verifiedSchoolIds, setVerifiedSchoolIds] = useState<Set<string>>(() => {
+    try {
+      const saved = sessionStorage.getItem('bkn_verified_schools');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  const handleVerifySchool = (schoolId: string) => {
+    setVerifiedSchoolIds((prev) => {
+      const next = new Set(prev);
+      next.add(schoolId);
+      try {
+        sessionStorage.setItem('bkn_verified_schools', JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  };
+
   // Function to refresh from Google Apps Script
   const handleRefreshFromGAS = async (showBanner = true) => {
     if (!gasConfig.webAppUrl) {
@@ -451,6 +472,8 @@ export default function App() {
                 lastSyncTime={lastSyncTime}
                 onRefreshFromGAS={() => handleRefreshFromGAS(true)}
                 gasConfig={gasConfig}
+                onVerifySchool={handleVerifySchool}
+                verifiedSchoolIds={verifiedSchoolIds}
               />
             )}
 
@@ -463,6 +486,9 @@ export default function App() {
                 onViewSchoolInDashboard={(_schoolId) => {
                   setActiveUserTab('dashboard');
                 }}
+                isAdmin={isAdminLoggedIn}
+                verifiedSchoolIds={verifiedSchoolIds}
+                onVerifySchool={handleVerifySchool}
               />
             )}
 

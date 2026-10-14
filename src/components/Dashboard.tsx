@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { ALL_SCHOOLS, SCHOOL_CLUSTERS } from '../data/schoolsData';
 import { DISTRICT_DEPARTMENTS, ORGANIZATION_INFO } from '../data/organization';
-import { SchoolStaffRecord, DistrictStaff, GASConfig } from '../types';
+import { SchoolStaffRecord, DistrictStaff, GASConfig, SchoolInfo } from '../types';
+import { SchoolSmisModal } from './SchoolSmisModal';
 import {
   Users,
   School,
@@ -30,6 +31,8 @@ interface DashboardProps {
   lastSyncTime?: string;
   onRefreshFromGAS?: () => Promise<void>;
   gasConfig?: GASConfig;
+  onVerifySchool?: (schoolId: string) => void;
+  verifiedSchoolIds?: Set<string>;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -43,7 +46,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
   lastSyncTime = '',
   onRefreshFromGAS,
   gasConfig,
+  onVerifySchool,
+  verifiedSchoolIds,
 }) => {
+  // SMIS Auth Modal state for school verification (แนวทางที่ 1 • รหัสแบบ A)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalSchool, setAuthModalSchool] = useState<SchoolInfo | null>(null);
+
   // Search & Filters for School Table
   const [searchTerm, setSearchTerm] = useState('');
   const [clusterFilter, setClusterFilter] = useState('');
@@ -420,6 +429,41 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
 
+          {/* School Verification Access Banner (แนวทางที่ 1 • รหัสแบบ A) */}
+          <div className="bg-linear-to-r from-emerald-50 via-teal-50/80 to-slate-50 border border-emerald-200 rounded-xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                <Lock className="w-4 h-4 text-emerald-100" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
+                    ความปลอดภัยข้อมูลโรงเรียน
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">แนวทางที่ 1 • ยืนยันด้วยรหัสแบบ A</span>
+                </div>
+                <div className="font-bold text-slate-800 text-sm mt-0.5">
+                  สำหรับโรงเรียน: ต้องการตรวจสอบหรือแก้ไขข้อมูลของโรงเรียนท่าน?
+                </div>
+                <div className="text-slate-600 text-xs mt-0.5 leading-relaxed">
+                  ระบบซ่อนปุ่มแก้ไขในตาราง Dashboard สาธารณะเพื่อความปลอดภัย — โรงเรียนสามารถยืนยันตัวตนด้วย <strong>รหัสประจำโรงเรียน (รหัส SMIS 8 หลัก)</strong> เพื่อเข้าดูและแก้ไขข้อมูล
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setAuthModalSchool(null);
+                setIsAuthModalOpen(true);
+              }}
+              className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow-md transition-all flex items-center gap-2 cursor-pointer shrink-0 self-start sm:self-auto"
+            >
+              <Lock className="w-3.5 h-3.5 text-emerald-200" />
+              <span>ยืนยันรหัสโรงเรียนเพื่อดู/แก้ไข</span>
+            </button>
+          </div>
+
           {/* Filters Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
             {/* Search */}
@@ -502,7 +546,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         {index + 1}
                       </td>
                       <td className="py-3 px-3 font-mono text-xs text-slate-600">
-                        {sch.id}
+                        {isAdmin ? (
+                          <span className="font-semibold text-slate-800">{sch.id}</span>
+                        ) : (
+                          <span className="text-slate-400 select-none tracking-wider font-mono" title="รหัสประจำโรงเรียน 8 หลัก (ซ่อนไว้เพื่อความปลอดภัย)">
+                            {sch.id.slice(0, 4)}••••
+                          </span>
+                        )}
                       </td>
                       <td className="py-3 px-4">
                         <div className="font-semibold text-slate-900">{sch.name}</div>
@@ -591,16 +641,53 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         )}
                       </td>
 
-                      {/* Action */}
+                      {/* Action (แนวทางที่ 1: ซ่อนปุ่มแก้ไขในตาราง Dashboard สำหรับบุคคลทั่วไป) */}
                       <td className="py-3 px-3 text-center">
-                        <button
-                          type="button"
-                          onClick={() => onNavigateToSchoolForm(sch.id)}
-                          className="px-2.5 py-1.5 bg-slate-100 hover:bg-emerald-700 hover:text-white text-slate-700 text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1 w-full cursor-pointer"
-                        >
-                          <PlusCircle className="w-3.5 h-3.5" />
-                          <span>{count === 2 ? 'แก้ไข' : 'กรอก'}</span>
-                        </button>
+                        {count === 0 ? (
+                          // Haven't submitted yet: Anyone can fill initial data
+                          <button
+                            type="button"
+                            onClick={() => onNavigateToSchoolForm(sch.id)}
+                            className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-700 hover:text-white text-emerald-800 border border-emerald-300 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1 w-full cursor-pointer shadow-2xs"
+                            title="กรอกข้อมูลโรงเรียนใหม่"
+                          >
+                            <PlusCircle className="w-3.5 h-3.5" />
+                            <span>กรอกข้อมูล</span>
+                          </button>
+                        ) : isAdmin ? (
+                          // Admin can directly edit
+                          <button
+                            type="button"
+                            onClick={() => onNavigateToSchoolForm(sch.id)}
+                            className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-700 hover:text-white text-indigo-800 border border-indigo-300 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1 w-full cursor-pointer shadow-2xs"
+                            title="แก้ไขข้อมูล (Admin)"
+                          >
+                            <PlusCircle className="w-3.5 h-3.5" />
+                            <span>แก้ไข (Admin)</span>
+                          </button>
+                        ) : verifiedSchoolIds && verifiedSchoolIds.has(sch.id) ? (
+                          // School already verified SMIS code in this session
+                          <button
+                            type="button"
+                            onClick={() => onNavigateToSchoolForm(sch.id)}
+                            className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1 w-full cursor-pointer shadow-2xs"
+                            title="แก้ไขข้อมูลโรงเรียน (ยืนยันรหัส SMIS แล้ว)"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>แก้ไข (ปลดล็อก)</span>
+                          </button>
+                        ) : (
+                          // Submitted & Not Admin: ซ่อนปุ่มแก้ไขในตาราง Dashboard อย่างสมบูรณ์!
+                          <div className="flex items-center justify-center">
+                            <span
+                              className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 w-full"
+                              title="บันทึกข้อมูลแล้ว (ซ่อนปุ่มแก้ไขในตาราง Dashboard ตามแนวทางที่ 1 • ยืนยันรหัส SMIS 8 หลักผ่านปุ่มด้านบนเพื่อแก้ไข)"
+                            >
+                              <Lock className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span>บันทึกแล้ว</span>
+                            </span>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );
@@ -674,6 +761,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
           ))}
         </div>
       </div>
+
+      {/* SMIS Authorization Modal (แนวทางที่ 1 • รหัสแบบ A) */}
+      <SchoolSmisModal
+        isOpen={isAuthModalOpen}
+        targetSchool={authModalSchool}
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          setAuthModalSchool(null);
+        }}
+        onSuccess={(schoolId) => {
+          setIsAuthModalOpen(false);
+          setAuthModalSchool(null);
+          if (onVerifySchool) onVerifySchool(schoolId);
+          onNavigateToSchoolForm(schoolId);
+        }}
+      />
     </div>
   );
 };
