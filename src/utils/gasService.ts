@@ -274,6 +274,29 @@ function parseGASDistrictStaff(rawList: any[]): DistrictStaff[] {
   return rawList
     .map((item, idx) => {
       if (Array.isArray(item)) {
+        const isArrayShifted =
+          ['นาย', 'นาง', 'นางสาว', 'ดร.', 'ว่าที่'].some((p) => String(item[0] || '').startsWith(p)) ||
+          String(item[6] || '').includes('@') ||
+          !String(item[7] || '').includes('@');
+
+        if (isArrayShifted) {
+          return {
+            id: `dist-${idx + 1}`,
+            prefixTh: String(item[0] || 'นาย'),
+            firstNameTh: String(item[1] || ''),
+            lastNameTh: String(item[2] || ''),
+            prefixEn: String(item[3] || 'Mr.'),
+            firstNameEn: String(item[4] || ''),
+            lastNameEn: String(item[5] || ''),
+            email: String(item[6] || ''),
+            position: String(item[7] || ''),
+            department: String(item[8] || ''),
+            rolePermission: (item[9] === 'ผู้ดูแลระบบ' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งาน') as 'ผู้ดูแลระบบ' | 'ผู้ใช้งาน',
+            createdAt: String(item[10] || new Date().toLocaleString('th-TH')),
+            updatedAt: String(item[10] || new Date().toLocaleString('th-TH')),
+          };
+        }
+
         return {
           id: String(item[0] || `dist-${idx + 1}`),
           prefixTh: String(item[1] || 'นาย'),
@@ -290,6 +313,31 @@ function parseGASDistrictStaff(rawList: any[]): DistrictStaff[] {
           updatedAt: String(item[11] || new Date().toLocaleString('th-TH')),
         };
       }
+
+      // Check if object fields are shifted (meaning column 0 of sheet was prefixTh instead of id)
+      const isShifted =
+        (typeof item.id === 'string' && ['นาย', 'นาง', 'นางสาว', 'ดร.', 'ว่าที่'].some((p) => item.id.startsWith(p))) ||
+        (typeof item.lastNameEn === 'string' && item.lastNameEn.includes('@')) ||
+        (typeof item.email === 'string' && !item.email.includes('@') && item.email.length > 0);
+
+      if (isShifted) {
+        return {
+          id: `dist-${idx + 1}`,
+          prefixTh: String(item.id || 'นาย'),
+          firstNameTh: String(item.prefixTh || ''),
+          lastNameTh: String(item.firstNameTh || ''),
+          prefixEn: String(item.lastNameTh || 'Mr.'),
+          firstNameEn: String(item.prefixEn || ''),
+          lastNameEn: String(item.firstNameEn || ''),
+          email: String(item.lastNameEn || ''),
+          position: String(item.email || ''),
+          department: String(item.position || ''),
+          rolePermission: (item.department === 'ผู้ดูแลระบบ' || item.rolePermission === 'ผู้ดูแลระบบ' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งาน') as 'ผู้ดูแลระบบ' | 'ผู้ใช้งาน',
+          createdAt: String(item.createdAt || new Date().toLocaleString('th-TH')),
+          updatedAt: String(item.updatedAt || new Date().toLocaleString('th-TH')),
+        };
+      }
+
       return {
         id: String(item.id || `dist-${idx + 1}`),
         prefixTh: String(item.prefixTh || 'นาย'),
@@ -315,51 +363,109 @@ function parseGASSchoolStaff(rawList: any[]): SchoolStaffRecord[] {
     .map((item, idx) => {
       let rec: Partial<SchoolStaffRecord> = {};
       if (Array.isArray(item)) {
-        rec = {
-          id: String(item[0] || `sch-${idx + 1}`),
-          schoolName: String(item[1] || ''),
-          documentPrefix: String(item[2] || 'ศธ 04321/'),
-          directorPrefixTh: String(item[3] || 'นาย'),
-          directorFirstNameTh: String(item[4] || ''),
-          directorLastNameTh: String(item[5] || ''),
-          directorPrefixEn: String(item[6] || 'Mr.'),
-          directorFirstNameEn: String(item[7] || ''),
-          directorLastNameEn: String(item[8] || ''),
-          directorEmail: String(item[9] || ''),
-          clerkPrefixTh: String(item[10] || 'นางสาว'),
-          clerkFirstNameTh: String(item[11] || ''),
-          clerkLastNameTh: String(item[12] || ''),
-          clerkPrefixEn: String(item[13] || 'Miss'),
-          clerkFirstNameEn: String(item[14] || ''),
-          clerkLastNameEn: String(item[15] || ''),
-          clerkEmail: String(item[16] || ''),
-          clusterName: String(item[17] || ''),
-          createdAt: String(item[18] || new Date().toLocaleString('th-TH')),
-          updatedAt: String(item[18] || new Date().toLocaleString('th-TH')),
-        };
+        const isArrayShifted =
+          ['โรงเรียน', 'บ้าน', 'สมาคม', 'ชุมชน'].some((p) => String(item[0] || '').startsWith(p)) ||
+          ALL_SCHOOLS.some((s) => s.name === item[0]);
+
+        if (isArrayShifted) {
+          rec = {
+            id: `sch-${idx + 1}`,
+            schoolName: String(item[0] || ''),
+            documentPrefix: String(item[1] || 'ศธ 04321/'),
+            directorPrefixTh: String(item[2] || 'นาย'),
+            directorFirstNameTh: String(item[3] || ''),
+            directorLastNameTh: String(item[4] || ''),
+            directorPrefixEn: String(item[5] || 'Mr.'),
+            directorFirstNameEn: String(item[6] || ''),
+            directorLastNameEn: String(item[7] || ''),
+            directorEmail: String(item[8] || ''),
+            clerkPrefixTh: String(item[9] || 'นางสาว'),
+            clerkFirstNameTh: String(item[10] || ''),
+            clerkLastNameTh: String(item[11] || ''),
+            clerkPrefixEn: String(item[12] || 'Miss'),
+            clerkFirstNameEn: String(item[13] || ''),
+            clerkLastNameEn: String(item[14] || ''),
+            clerkEmail: String(item[15] || ''),
+            clusterName: String(item[16] || ''),
+            createdAt: String(item[17] || new Date().toLocaleString('th-TH')),
+            updatedAt: String(item[17] || new Date().toLocaleString('th-TH')),
+          };
+        } else {
+          rec = {
+            id: String(item[0] || `sch-${idx + 1}`),
+            schoolName: String(item[1] || ''),
+            documentPrefix: String(item[2] || 'ศธ 04321/'),
+            directorPrefixTh: String(item[3] || 'นาย'),
+            directorFirstNameTh: String(item[4] || ''),
+            directorLastNameTh: String(item[5] || ''),
+            directorPrefixEn: String(item[6] || 'Mr.'),
+            directorFirstNameEn: String(item[7] || ''),
+            directorLastNameEn: String(item[8] || ''),
+            directorEmail: String(item[9] || ''),
+            clerkPrefixTh: String(item[10] || 'นางสาว'),
+            clerkFirstNameTh: String(item[11] || ''),
+            clerkLastNameTh: String(item[12] || ''),
+            clerkPrefixEn: String(item[13] || 'Miss'),
+            clerkFirstNameEn: String(item[14] || ''),
+            clerkLastNameEn: String(item[15] || ''),
+            clerkEmail: String(item[16] || ''),
+            clusterName: String(item[17] || ''),
+            createdAt: String(item[18] || new Date().toLocaleString('th-TH')),
+            updatedAt: String(item[18] || new Date().toLocaleString('th-TH')),
+          };
+        }
       } else {
-        rec = {
-          id: String(item.id || `sch-${idx + 1}`),
-          schoolName: String(item.schoolName || ''),
-          documentPrefix: String(item.documentPrefix || 'ศธ 04321/'),
-          directorPrefixTh: String(item.directorPrefixTh || 'นาย'),
-          directorFirstNameTh: String(item.directorFirstNameTh || ''),
-          directorLastNameTh: String(item.directorLastNameTh || ''),
-          directorPrefixEn: String(item.directorPrefixEn || 'Mr.'),
-          directorFirstNameEn: String(item.directorFirstNameEn || ''),
-          directorLastNameEn: String(item.directorLastNameEn || ''),
-          directorEmail: String(item.directorEmail || ''),
-          clerkPrefixTh: String(item.clerkPrefixTh || 'นางสาว'),
-          clerkFirstNameTh: String(item.clerkFirstNameTh || ''),
-          clerkLastNameTh: String(item.clerkLastNameTh || ''),
-          clerkPrefixEn: String(item.clerkPrefixEn || 'Miss'),
-          clerkFirstNameEn: String(item.clerkFirstNameEn || ''),
-          clerkLastNameEn: String(item.clerkLastNameEn || ''),
-          clerkEmail: String(item.clerkEmail || ''),
-          clusterName: String(item.clusterName || ''),
-          createdAt: String(item.createdAt || new Date().toLocaleString('th-TH')),
-          updatedAt: String(item.updatedAt || new Date().toLocaleString('th-TH')),
-        };
+        const isObjShifted =
+          (typeof item.id === 'string' && (item.id.startsWith('โรงเรียน') || item.id.startsWith('บ้าน') || ALL_SCHOOLS.some((s) => s.name === item.id))) ||
+          (typeof item.documentPrefix === 'string' && ['นาย', 'นาง', 'นางสาว'].some((p) => item.documentPrefix?.startsWith(p)));
+
+        if (isObjShifted) {
+          rec = {
+            id: `sch-${idx + 1}`,
+            schoolName: String(item.id || ''),
+            documentPrefix: String(item.schoolName || 'ศธ 04321/'),
+            directorPrefixTh: String(item.documentPrefix || 'นาย'),
+            directorFirstNameTh: String(item.directorPrefixTh || ''),
+            directorLastNameTh: String(item.directorFirstNameTh || ''),
+            directorPrefixEn: String(item.directorLastNameTh || 'Mr.'),
+            directorFirstNameEn: String(item.directorPrefixEn || ''),
+            directorLastNameEn: String(item.directorFirstNameEn || ''),
+            directorEmail: String(item.directorLastNameEn || ''),
+            clerkPrefixTh: String(item.directorEmail || 'นางสาว'),
+            clerkFirstNameTh: String(item.clerkPrefixTh || ''),
+            clerkLastNameTh: String(item.clerkFirstNameTh || ''),
+            clerkPrefixEn: String(item.clerkLastNameTh || 'Miss'),
+            clerkFirstNameEn: String(item.clerkPrefixEn || ''),
+            clerkLastNameEn: String(item.clerkFirstNameEn || ''),
+            clerkEmail: String(item.clerkLastNameEn || ''),
+            clusterName: String(item.clerkEmail || ''),
+            createdAt: String(item.createdAt || new Date().toLocaleString('th-TH')),
+            updatedAt: String(item.updatedAt || new Date().toLocaleString('th-TH')),
+          };
+        } else {
+          rec = {
+            id: String(item.id || `sch-${idx + 1}`),
+            schoolName: String(item.schoolName || ''),
+            documentPrefix: String(item.documentPrefix || 'ศธ 04321/'),
+            directorPrefixTh: String(item.directorPrefixTh || 'นาย'),
+            directorFirstNameTh: String(item.directorFirstNameTh || ''),
+            directorLastNameTh: String(item.directorLastNameTh || ''),
+            directorPrefixEn: String(item.directorPrefixEn || 'Mr.'),
+            directorFirstNameEn: String(item.directorFirstNameEn || ''),
+            directorLastNameEn: String(item.directorLastNameEn || ''),
+            directorEmail: String(item.directorEmail || ''),
+            clerkPrefixTh: String(item.clerkPrefixTh || 'นางสาว'),
+            clerkFirstNameTh: String(item.clerkFirstNameTh || ''),
+            clerkLastNameTh: String(item.clerkLastNameTh || ''),
+            clerkPrefixEn: String(item.clerkPrefixEn || 'Miss'),
+            clerkFirstNameEn: String(item.clerkFirstNameEn || ''),
+            clerkLastNameEn: String(item.clerkLastNameEn || ''),
+            clerkEmail: String(item.clerkEmail || ''),
+            clusterName: String(item.clusterName || ''),
+            createdAt: String(item.createdAt || new Date().toLocaleString('th-TH')),
+            updatedAt: String(item.updatedAt || new Date().toLocaleString('th-TH')),
+          };
+        }
       }
 
       // Match with predefined official schools
