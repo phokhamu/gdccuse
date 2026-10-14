@@ -11,6 +11,8 @@ import {
   Search,
   CheckCircle2,
   Table,
+  Trash2,
+  AlertCircle,
 } from 'lucide-react';
 
 interface GoogleSheetsViewProps {
@@ -20,6 +22,8 @@ interface GoogleSheetsViewProps {
   onRefreshFromServer: () => Promise<void>;
   onEditSchoolStaff: (staff: SchoolStaffRecord) => void;
   onEditDistrictStaff: (staff: DistrictStaff) => void;
+  onDeleteSchoolStaff?: (id: string) => void;
+  onDeleteDistrictStaff?: (id: string) => void;
 }
 
 export const GoogleSheetsView: React.FC<GoogleSheetsViewProps> = ({
@@ -29,11 +33,18 @@ export const GoogleSheetsView: React.FC<GoogleSheetsViewProps> = ({
   onRefreshFromServer,
   onEditSchoolStaff,
   onEditDistrictStaff,
+  onDeleteSchoolStaff,
+  onDeleteDistrictStaff,
 }) => {
   const [activeSheet, setActiveSheet] = useState<'school' | 'district'>('school');
   const [searchTerm, setSearchTerm] = useState('');
   const [isSavingToFile, setIsSavingToFile] = useState(false);
   const [saveBanner, setSaveBanner] = useState<string | null>(null);
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<{
+    type: 'school' | 'district';
+    id: string;
+    name: string;
+  } | null>(null);
 
   const handleSaveToSystemFiles = async () => {
     setIsSavingToFile(true);
@@ -273,13 +284,31 @@ export const GoogleSheetsView: React.FC<GoogleSheetsViewProps> = ({
                         {item.clusterName}
                       </td>
                       <td className="py-2 px-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => onEditSchoolStaff(item)}
-                          className="text-xs text-blue-700 hover:text-blue-900 underline font-medium cursor-pointer"
-                        >
-                          แก้ไข
-                        </button>
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onEditSchoolStaff(item)}
+                            className="text-xs text-blue-700 hover:text-blue-900 underline font-medium cursor-pointer"
+                          >
+                            แก้ไข
+                          </button>
+                          {onDeleteSchoolStaff && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDeleteConfirmTarget({
+                                  type: 'school',
+                                  id: item.id,
+                                  name: item.schoolName,
+                                })
+                              }
+                              className="text-xs text-rose-600 hover:text-rose-800 underline font-medium cursor-pointer flex items-center gap-0.5"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>ลบ</span>
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -302,7 +331,7 @@ export const GoogleSheetsView: React.FC<GoogleSheetsViewProps> = ({
                   <th className="py-2.5 px-3 min-w-[160px] border-r border-blue-800">ตำแหน่ง</th>
                   <th className="py-2.5 px-4 min-w-[180px] border-r border-blue-800">สังกัด / ชื่อหน่วยงาน</th>
                   <th className="py-2.5 px-3 min-w-[130px] border-r border-blue-800">สิทธิ์ผู้ดูแลระบบ, ผู้ใช้งาน</th>
-                  <th className="py-2.5 px-2 text-center w-16">จัดการ</th>
+                  <th className="py-2.5 px-2 text-center w-24">จัดการ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 font-sans text-slate-800">
@@ -344,13 +373,31 @@ export const GoogleSheetsView: React.FC<GoogleSheetsViewProps> = ({
                         </span>
                       </td>
                       <td className="py-2 px-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => onEditDistrictStaff(item)}
-                          className="text-xs text-blue-700 hover:text-blue-900 underline font-medium cursor-pointer"
-                        >
-                          แก้ไข
-                        </button>
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onEditDistrictStaff(item)}
+                            className="text-xs text-blue-700 hover:text-blue-900 underline font-medium cursor-pointer"
+                          >
+                            แก้ไข
+                          </button>
+                          {onDeleteDistrictStaff && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDeleteConfirmTarget({
+                                  type: 'district',
+                                  id: item.id,
+                                  name: `${item.prefixTh}${item.firstNameTh} ${item.lastNameTh} (${item.department})`,
+                                })
+                              }
+                              className="text-xs text-rose-600 hover:text-rose-800 underline font-medium cursor-pointer flex items-center gap-0.5"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>ลบ</span>
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -360,6 +407,50 @@ export const GoogleSheetsView: React.FC<GoogleSheetsViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmTarget && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center mb-3">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900">ยืนยันการลบข้อมูล?</h3>
+            <div className="mt-2 text-sm text-slate-600">
+              <p>ท่านต้องการลบข้อมูลรายการนี้ใช่หรือไม่:</p>
+              <p className="mt-2 p-2.5 bg-slate-100 rounded-lg font-semibold text-slate-900 text-xs break-words">
+                {deleteConfirmTarget.name}
+              </p>
+              <p className="mt-2 text-xs text-rose-600 font-medium">
+                * ข้อมูลจะถูกลบออกจากระบบและไม่สามารถกู้คืนได้
+              </p>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmTarget(null)}
+                className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-100 cursor-pointer"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (deleteConfirmTarget.type === 'school') {
+                    onDeleteSchoolStaff?.(deleteConfirmTarget.id);
+                  } else {
+                    onDeleteDistrictStaff?.(deleteConfirmTarget.id);
+                  }
+                  setDeleteConfirmTarget(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 cursor-pointer shadow-xs"
+              >
+                ยืนยันการลบ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

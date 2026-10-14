@@ -20,6 +20,9 @@ import {
   saveGASConfig,
   loadAllFromServer,
   syncAllToServer,
+  deleteDistrictStaffFromServer,
+  deleteSchoolStaffFromServer,
+  batchDeleteFromServer,
 } from './utils/gasService';
 import { ORGANIZATION_INFO } from './data/organization';
 import { ALL_SCHOOLS } from './data/schoolsData';
@@ -142,6 +145,7 @@ export default function App() {
     setDistrictStaffList((prev) => {
       const updated = prev.filter((s) => s.id !== id);
       saveDistrictStaffToStorage(updated);
+      deleteDistrictStaffFromServer(id);
       return updated;
     });
   };
@@ -150,6 +154,27 @@ export default function App() {
     setSchoolStaffList((prev) => {
       const updated = prev.filter((s) => s.id !== id);
       saveSchoolStaffToStorage(updated);
+      deleteSchoolStaffFromServer(id);
+      return updated;
+    });
+  };
+
+  const handleBatchDeleteDistrictStaff = (ids: string[]) => {
+    const idSet = new Set(ids);
+    setDistrictStaffList((prev) => {
+      const updated = prev.filter((s) => !idSet.has(s.id));
+      saveDistrictStaffToStorage(updated);
+      batchDeleteFromServer('district', ids);
+      return updated;
+    });
+  };
+
+  const handleBatchDeleteSchoolStaff = (ids: string[]) => {
+    const idSet = new Set(ids);
+    setSchoolStaffList((prev) => {
+      const updated = prev.filter((s) => !idSet.has(s.id));
+      saveSchoolStaffToStorage(updated);
+      batchDeleteFromServer('school', ids);
       return updated;
     });
   };
@@ -268,6 +293,8 @@ export default function App() {
             onRefreshFromServer={handleRefreshFromServer}
             onDeleteDistrictStaff={handleDeleteDistrictStaff}
             onDeleteSchoolStaff={handleDeleteSchoolStaff}
+            onBatchDeleteDistrictStaff={handleBatchDeleteDistrictStaff}
+            onBatchDeleteSchoolStaff={handleBatchDeleteSchoolStaff}
             onEditDistrictStaff={handleEditDistrictStaff}
             onEditSchoolStaff={handleEditSchoolStaff}
             onClearAllData={handleClearAllData}

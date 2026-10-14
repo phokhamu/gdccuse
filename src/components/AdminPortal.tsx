@@ -29,6 +29,8 @@ interface AdminPortalProps {
   onRefreshFromServer: () => Promise<void>;
   onDeleteDistrictStaff: (id: string) => void;
   onDeleteSchoolStaff: (id: string) => void;
+  onBatchDeleteDistrictStaff?: (ids: string[]) => void;
+  onBatchDeleteSchoolStaff?: (ids: string[]) => void;
   onEditDistrictStaff: (staff: DistrictStaff) => void;
   onEditSchoolStaff: (staff: SchoolStaffRecord) => void;
   onClearAllData?: () => void;
@@ -46,6 +48,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   onRefreshFromServer,
   onDeleteDistrictStaff,
   onDeleteSchoolStaff,
+  onBatchDeleteDistrictStaff,
+  onBatchDeleteSchoolStaff,
   onEditDistrictStaff,
   onEditSchoolStaff,
   onClearAllData,
@@ -188,7 +192,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             }`}
           >
             <TableProperties className="w-4 h-4" />
-            <span>รายการข้อมูล / ส่งออก</span>
+            <span>จัดการ & ลบข้อมูล / ส่งออก</span>
           </button>
 
           <button
@@ -226,6 +230,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           onRefreshFromServer={onRefreshFromServer}
           onEditSchoolStaff={onEditSchoolStaff}
           onEditDistrictStaff={onEditDistrictStaff}
+          onDeleteSchoolStaff={onDeleteSchoolStaff}
+          onDeleteDistrictStaff={onDeleteDistrictStaff}
         />
       )}
 
@@ -235,6 +241,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           schoolStaffList={schoolStaffList}
           onDeleteDistrictStaff={onDeleteDistrictStaff}
           onDeleteSchoolStaff={onDeleteSchoolStaff}
+          onBatchDeleteDistrictStaff={onBatchDeleteDistrictStaff}
+          onBatchDeleteSchoolStaff={onBatchDeleteSchoolStaff}
           onEditDistrictStaff={onEditDistrictStaff}
           onEditSchoolStaff={onEditSchoolStaff}
           onClearAllData={onClearAllData}

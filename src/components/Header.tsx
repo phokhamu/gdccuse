@@ -236,7 +236,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <TableProperties className="w-4 h-4" />
-              <span>รายการข้อมูล / ส่งออก</span>
+              <span>จัดการ & ลบข้อมูล / ส่งออก</span>
             </button>
 
             <button

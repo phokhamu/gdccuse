@@ -110,6 +110,43 @@ app.post('/api/save/all', (req, res) => {
   });
 });
 
+// API: Delete District Staff from file
+app.delete('/api/district/:id', (req, res) => {
+  const { id } = req.params;
+  const list: any[] = readJsonFile(DISTRICT_FILE, []);
+  const updated = list.filter((item) => item.id !== id);
+  writeJsonFile(DISTRICT_FILE, updated);
+  res.json({ status: 'success', message: 'ลบข้อมูลผู้ใช้งานเขตเรียบร้อย' });
+});
+
+// API: Delete School Staff from file
+app.delete('/api/school/:id', (req, res) => {
+  const { id } = req.params;
+  const list: any[] = readJsonFile(SCHOOL_FILE, []);
+  const updated = list.filter((item) => item.id !== id);
+  writeJsonFile(SCHOOL_FILE, updated);
+  res.json({ status: 'success', message: 'ลบข้อมูลโรงเรียนเรียบร้อย' });
+});
+
+// API: Batch Delete from files
+app.post('/api/delete/batch', (req, res) => {
+  const { type, ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ status: 'error', message: 'ไม่มีรายการที่เลือกลบ' });
+  }
+  const idSet = new Set(ids);
+  if (type === 'district') {
+    const list: any[] = readJsonFile(DISTRICT_FILE, []);
+    const updated = list.filter((item) => !idSet.has(item.id));
+    writeJsonFile(DISTRICT_FILE, updated);
+  } else if (type === 'school') {
+    const list: any[] = readJsonFile(SCHOOL_FILE, []);
+    const updated = list.filter((item) => !idSet.has(item.id));
+    writeJsonFile(SCHOOL_FILE, updated);
+  }
+  res.json({ status: 'success', message: `ลบข้อมูล ${ids.length} รายการเรียบร้อย` });
+});
+
 // API: Download genuine Google Sheets / Excel (.xlsx) file
 app.get('/api/download/xlsx', (_req, res) => {
   const districtList: any[] = readJsonFile(DISTRICT_FILE, []);

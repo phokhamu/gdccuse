@@ -202,6 +202,44 @@ export async function loadAllFromServer(): Promise<{
   return null;
 }
 
+export async function deleteDistrictStaffFromServer(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/district/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function deleteSchoolStaffFromServer(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/school/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function batchDeleteFromServer(
+  type: 'district' | 'school',
+  ids: string[]
+): Promise<boolean> {
+  try {
+    const res = await fetch('/api/delete/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, ids }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * ส่งข้อมูลผู้ใช้งานเขตไปยัง Google Apps Script
  */
