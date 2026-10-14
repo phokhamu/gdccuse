@@ -27,6 +27,7 @@ interface AdminPortalProps {
   gasConfig: GASConfig;
   onUpdateGASConfig: (config: GASConfig) => void;
   onRefreshFromServer: () => Promise<void>;
+  onRefreshFromGAS?: () => Promise<void>;
   onDeleteDistrictStaff: (id: string) => void;
   onDeleteSchoolStaff: (id: string) => void;
   onBatchDeleteDistrictStaff?: (ids: string[]) => void;
@@ -46,6 +47,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   gasConfig,
   onUpdateGASConfig,
   onRefreshFromServer,
+  onRefreshFromGAS,
   onDeleteDistrictStaff,
   onDeleteSchoolStaff,
   onBatchDeleteDistrictStaff,
@@ -228,6 +230,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           schoolStaffList={schoolStaffList}
           gasConfig={gasConfig}
           onRefreshFromServer={onRefreshFromServer}
+          onRefreshFromGAS={onRefreshFromGAS}
           onEditSchoolStaff={onEditSchoolStaff}
           onEditDistrictStaff={onEditDistrictStaff}
           onDeleteSchoolStaff={onDeleteSchoolStaff}
@@ -255,6 +258,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           onUpdateConfig={onUpdateGASConfig}
           districtStaffList={districtStaffList}
           schoolStaffList={schoolStaffList}
+          onRefreshFromGAS={onRefreshFromGAS}
         />
       )}
 

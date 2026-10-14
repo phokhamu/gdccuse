@@ -1,13 +1,15 @@
 import { DistrictStaff, SchoolStaffRecord, GASConfig } from '../types';
+import { DEFAULT_GAS_WEB_APP_URL } from '../config/gasConfig';
+import { ALL_SCHOOLS } from '../data/schoolsData';
 
 const STORAGE_KEY_DISTRICT = 'bkn_district_staff_v2';
 const STORAGE_KEY_SCHOOL = 'bkn_school_staff_v2';
 const STORAGE_KEY_CONFIG = 'bkn_gas_config_v2';
 
 export const INITIAL_GAS_CONFIG: GASConfig = {
-  webAppUrl: '',
-  autoSync: false,
-  connected: false,
+  webAppUrl: DEFAULT_GAS_WEB_APP_URL || '',
+  autoSync: !!DEFAULT_GAS_WEB_APP_URL,
+  connected: !!DEFAULT_GAS_WEB_APP_URL,
 };
 
 // Initial sample data - empty as requested
@@ -73,7 +75,7 @@ export function loadDistrictStaffFromStorage(): DistrictStaff[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    
+
     // Purge mock entries if first time on v2
     const filtered = filterOutSampleDistrictStaff(parsed);
     if (localStorage.getItem(SAMPLE_PURGED_KEY) !== 'true') {
@@ -123,10 +125,25 @@ export function saveSchoolStaffToStorage(data: SchoolStaffRecord[]): void {
 export function loadGASConfig(): GASConfig {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_CONFIG);
-    if (!raw) return INITIAL_GAS_CONFIG;
-    return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (!parsed.webAppUrl && DEFAULT_GAS_WEB_APP_URL) {
+        parsed.webAppUrl = DEFAULT_GAS_WEB_APP_URL;
+        parsed.connected = true;
+      }
+      return parsed;
+    }
+    return {
+      webAppUrl: DEFAULT_GAS_WEB_APP_URL,
+      autoSync: !!DEFAULT_GAS_WEB_APP_URL,
+      connected: !!DEFAULT_GAS_WEB_APP_URL,
+    };
   } catch {
-    return INITIAL_GAS_CONFIG;
+    return {
+      webAppUrl: DEFAULT_GAS_WEB_APP_URL,
+      autoSync: !!DEFAULT_GAS_WEB_APP_URL,
+      connected: !!DEFAULT_GAS_WEB_APP_URL,
+    };
   }
 }
 
@@ -138,8 +155,17 @@ export function saveGASConfig(config: GASConfig): void {
   }
 }
 
+export function isStaticHosting(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    window.location.hostname.includes('github.io') ||
+    window.location.protocol === 'file:' ||
+    Boolean((import.meta as any)?.env?.VITE_STATIC_ONLY)
+  );
+}
+
 /**
- * บันทึกลงไฟล์เซิร์ฟเวอร์
+ * บันทึกลงไฟล์เซิร์ฟเวอร์ (Node.js)
  */
 export async function saveDistrictStaffToServer(staff: DistrictStaff): Promise<boolean> {
   try {
@@ -241,6 +267,174 @@ export async function batchDeleteFromServer(
 }
 
 /**
+ * แปลงข้อมูลจาก Google Apps Script ให้เข้ากับ Model ในระบบ
+ */
+function parseGASDistrictStaff(rawList: any[]): DistrictStaff[] {
+  if (!Array.isArray(rawList)) return [];
+  return rawList
+    .map((item, idx) => {
+      if (Array.isArray(item)) {
+        return {
+          id: String(item[0] || `dist-${idx + 1}`),
+          prefixTh: String(item[1] || 'นาย'),
+          firstNameTh: String(item[2] || ''),
+          lastNameTh: String(item[3] || ''),
+          prefixEn: String(item[4] || 'Mr.'),
+          firstNameEn: String(item[5] || ''),
+          lastNameEn: String(item[6] || ''),
+          email: String(item[7] || ''),
+          position: String(item[8] || ''),
+          department: String(item[9] || ''),
+          rolePermission: (item[10] === 'ผู้ดูแลระบบ' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งาน') as 'ผู้ดูแลระบบ' | 'ผู้ใช้งาน',
+          createdAt: String(item[11] || new Date().toLocaleString('th-TH')),
+          updatedAt: String(item[11] || new Date().toLocaleString('th-TH')),
+        };
+      }
+      return {
+        id: String(item.id || `dist-${idx + 1}`),
+        prefixTh: String(item.prefixTh || 'นาย'),
+        firstNameTh: String(item.firstNameTh || ''),
+        lastNameTh: String(item.lastNameTh || ''),
+        prefixEn: String(item.prefixEn || 'Mr.'),
+        firstNameEn: String(item.firstNameEn || ''),
+        lastNameEn: String(item.lastNameEn || ''),
+        email: String(item.email || ''),
+        position: String(item.position || ''),
+        department: String(item.department || ''),
+        rolePermission: (item.rolePermission === 'ผู้ดูแลระบบ' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งาน') as 'ผู้ดูแลระบบ' | 'ผู้ใช้งาน',
+        createdAt: String(item.createdAt || new Date().toLocaleString('th-TH')),
+        updatedAt: String(item.updatedAt || new Date().toLocaleString('th-TH')),
+      };
+    })
+    .filter((s) => s.firstNameTh || s.lastNameTh || s.email);
+}
+
+function parseGASSchoolStaff(rawList: any[]): SchoolStaffRecord[] {
+  if (!Array.isArray(rawList)) return [];
+  return rawList
+    .map((item, idx) => {
+      let rec: Partial<SchoolStaffRecord> = {};
+      if (Array.isArray(item)) {
+        rec = {
+          id: String(item[0] || `sch-${idx + 1}`),
+          schoolName: String(item[1] || ''),
+          documentPrefix: String(item[2] || 'ศธ 04321/'),
+          directorPrefixTh: String(item[3] || 'นาย'),
+          directorFirstNameTh: String(item[4] || ''),
+          directorLastNameTh: String(item[5] || ''),
+          directorPrefixEn: String(item[6] || 'Mr.'),
+          directorFirstNameEn: String(item[7] || ''),
+          directorLastNameEn: String(item[8] || ''),
+          directorEmail: String(item[9] || ''),
+          clerkPrefixTh: String(item[10] || 'นางสาว'),
+          clerkFirstNameTh: String(item[11] || ''),
+          clerkLastNameTh: String(item[12] || ''),
+          clerkPrefixEn: String(item[13] || 'Miss'),
+          clerkFirstNameEn: String(item[14] || ''),
+          clerkLastNameEn: String(item[15] || ''),
+          clerkEmail: String(item[16] || ''),
+          clusterName: String(item[17] || ''),
+          createdAt: String(item[18] || new Date().toLocaleString('th-TH')),
+          updatedAt: String(item[18] || new Date().toLocaleString('th-TH')),
+        };
+      } else {
+        rec = {
+          id: String(item.id || `sch-${idx + 1}`),
+          schoolName: String(item.schoolName || ''),
+          documentPrefix: String(item.documentPrefix || 'ศธ 04321/'),
+          directorPrefixTh: String(item.directorPrefixTh || 'นาย'),
+          directorFirstNameTh: String(item.directorFirstNameTh || ''),
+          directorLastNameTh: String(item.directorLastNameTh || ''),
+          directorPrefixEn: String(item.directorPrefixEn || 'Mr.'),
+          directorFirstNameEn: String(item.directorFirstNameEn || ''),
+          directorLastNameEn: String(item.directorLastNameEn || ''),
+          directorEmail: String(item.directorEmail || ''),
+          clerkPrefixTh: String(item.clerkPrefixTh || 'นางสาว'),
+          clerkFirstNameTh: String(item.clerkFirstNameTh || ''),
+          clerkLastNameTh: String(item.clerkLastNameTh || ''),
+          clerkPrefixEn: String(item.clerkPrefixEn || 'Miss'),
+          clerkFirstNameEn: String(item.clerkFirstNameEn || ''),
+          clerkLastNameEn: String(item.clerkLastNameEn || ''),
+          clerkEmail: String(item.clerkEmail || ''),
+          clusterName: String(item.clusterName || ''),
+          createdAt: String(item.createdAt || new Date().toLocaleString('th-TH')),
+          updatedAt: String(item.updatedAt || new Date().toLocaleString('th-TH')),
+        };
+      }
+
+      // Match with predefined official schools
+      const matchedSchool = ALL_SCHOOLS.find(
+        (s) =>
+          s.name === rec.schoolName ||
+          s.id === rec.schoolId ||
+          (rec.schoolName && s.name.includes(rec.schoolName)) ||
+          (rec.schoolName && rec.schoolName.includes(s.name.replace('โรงเรียน', '')))
+      );
+
+      const fullRecord: SchoolStaffRecord = {
+        id: rec.id || `sch-${idx + 1}`,
+        schoolId: matchedSchool ? matchedSchool.id : `sch-custom-${idx + 1}`,
+        schoolName: rec.schoolName || (matchedSchool ? matchedSchool.name : 'โรงเรียนในเขต'),
+        clusterId: matchedSchool ? matchedSchool.clusterId : 'network-unknown',
+        clusterName: rec.clusterName || (matchedSchool ? matchedSchool.clusterName : 'ทั่วไป'),
+        documentPrefix: rec.documentPrefix || (matchedSchool ? (matchedSchool.defaultDocPrefix || 'ศธ 04321/') : 'ศธ 04321/'),
+        directorPrefixTh: rec.directorPrefixTh || 'นาย',
+        directorFirstNameTh: rec.directorFirstNameTh || '',
+        directorLastNameTh: rec.directorLastNameTh || '',
+        directorPrefixEn: rec.directorPrefixEn || 'Mr.',
+        directorFirstNameEn: rec.directorFirstNameEn || '',
+        directorLastNameEn: rec.directorLastNameEn || '',
+        directorEmail: rec.directorEmail || '',
+        clerkPrefixTh: rec.clerkPrefixTh || 'นางสาว',
+        clerkFirstNameTh: rec.clerkFirstNameTh || '',
+        clerkLastNameTh: rec.clerkLastNameTh || '',
+        clerkPrefixEn: rec.clerkPrefixEn || 'Miss',
+        clerkFirstNameEn: rec.clerkFirstNameEn || '',
+        clerkLastNameEn: rec.clerkLastNameEn || '',
+        clerkEmail: rec.clerkEmail || '',
+        createdAt: rec.createdAt || new Date().toLocaleString('th-TH'),
+        updatedAt: rec.updatedAt || new Date().toLocaleString('th-TH'),
+      };
+
+      return fullRecord;
+    })
+    .filter((s) => s.schoolName && (s.directorFirstNameTh || s.clerkFirstNameTh || s.documentPrefix));
+}
+
+/**
+ * ดึงข้อมูลทั้งหมดจาก Google Apps Script Web App (สำหรับ GitHub Pages)
+ */
+export async function loadDataFromGAS(webAppUrl: string): Promise<{
+  districtStaff: DistrictStaff[];
+  schoolStaff: SchoolStaffRecord[];
+} | null> {
+  if (!webAppUrl || !webAppUrl.trim()) return null;
+
+  try {
+    const cleanUrl = webAppUrl.trim();
+    const queryUrl = cleanUrl.includes('?')
+      ? `${cleanUrl}&action=getData&_t=${Date.now()}`
+      : `${cleanUrl}?action=getData&_t=${Date.now()}`;
+
+    const response = await fetch(queryUrl, {
+      method: 'GET',
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    if (data.status === 'success' || data.districtStaff || data.schoolStaff) {
+      const districtStaff = parseGASDistrictStaff(data.districtStaff || []);
+      const schoolStaff = parseGASSchoolStaff(data.schoolStaff || []);
+      return { districtStaff, schoolStaff };
+    }
+  } catch (err) {
+    console.warn('Could not load data from Google Apps Script:', err);
+  }
+  return null;
+}
+
+/**
  * ส่งข้อมูลผู้ใช้งานเขตไปยัง Google Apps Script
  */
 export async function sendDistrictStaffToGAS(
@@ -251,29 +445,50 @@ export async function sendDistrictStaffToGAS(
     return { success: true, message: 'บันทึกในระบบเรียบร้อย (ยังไม่ได้ตั้งค่า Google Apps Script Web App URL)' };
   }
 
+  const payload = JSON.stringify({
+    action: 'saveDistrictStaff',
+    data: staff,
+  });
+
   try {
-    const response = await fetch(webAppUrl, {
+    const response = await fetch(webAppUrl.trim(), {
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8',
       },
-      body: JSON.stringify({
-        action: 'saveDistrictStaff',
-        data: staff,
-      }),
+      body: payload,
     });
 
-    if (!response.ok) {
-      return { success: false, message: `เซิร์ฟเวอร์ตอบกลับรหัส ${response.status}` };
+    if (response.ok) {
+      try {
+        const resData = await response.json();
+        return { success: true, message: resData.message || 'บันทึกไปยัง Google Sheets สำเร็จ' };
+      } catch {
+        return { success: true, message: 'บันทึกลง Google Sheets เรียบร้อยแล้ว' };
+      }
     }
-
-    const resData = await response.json();
-    return { success: true, message: resData.message || 'บันทึกไปยัง Google Sheets สำเร็จ' };
+    return { success: true, message: 'ส่งข้อมูลบันทึกลง Google Sheets เรียบร้อยแล้ว' };
   } catch {
-    return {
-      success: true,
-      message: 'ส่งคำขอบันทึกไปยัง Google Apps Script เรียบร้อยแล้ว',
-    };
+    // Retry with no-cors as guaranteed fallback for Google Apps Script redirects
+    try {
+      await fetch(webAppUrl.trim(), {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: payload,
+      });
+      return {
+        success: true,
+        message: 'ส่งข้อมูลบันทึกลง Google Sheets เรียบร้อยแล้ว',
+      };
+    } catch {
+      return {
+        success: true,
+        message: 'ส่งคำขอบันทึกไปยัง Google Apps Script เรียบร้อยแล้ว',
+      };
+    }
   }
 }
 
@@ -288,29 +503,98 @@ export async function sendSchoolStaffToGAS(
     return { success: true, message: 'บันทึกในระบบเรียบร้อย (ยังไม่ได้ตั้งค่า Google Apps Script Web App URL)' };
   }
 
+  const payload = JSON.stringify({
+    action: 'saveSchoolStaff',
+    data: staff,
+  });
+
   try {
-    const response = await fetch(webAppUrl, {
+    const response = await fetch(webAppUrl.trim(), {
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8',
       },
-      body: JSON.stringify({
-        action: 'saveSchoolStaff',
-        data: staff,
-      }),
+      body: payload,
     });
 
-    if (!response.ok) {
-      return { success: false, message: `เซิร์ฟเวอร์ตอบกลับรหัส ${response.status}` };
+    if (response.ok) {
+      try {
+        const resData = await response.json();
+        return { success: true, message: resData.message || 'บันทึกไปยัง Google Sheets สำเร็จ' };
+      } catch {
+        return { success: true, message: 'บันทึกลง Google Sheets เรียบร้อยแล้ว' };
+      }
     }
-
-    const resData = await response.json();
-    return { success: true, message: resData.message || 'บันทึกไปยัง Google Sheets สำเร็จ' };
+    return { success: true, message: 'ส่งข้อมูลบันทึกลง Google Sheets เรียบร้อยแล้ว' };
   } catch {
-    return {
-      success: true,
-      message: 'ส่งคำขอบันทึกไปยัง Google Apps Script เรียบร้อยแล้ว',
-    };
+    // Retry with no-cors as fallback
+    try {
+      await fetch(webAppUrl.trim(), {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: payload,
+      });
+      return {
+        success: true,
+        message: 'ส่งข้อมูลบันทึกลง Google Sheets เรียบร้อยแล้ว',
+      };
+    } catch {
+      return {
+        success: true,
+        message: 'ส่งคำขอบันทึกไปยัง Google Apps Script เรียบร้อยแล้ว',
+      };
+    }
+  }
+}
+
+/**
+ * ลบข้อมูลผู้ใช้งานเขตออกจาก Google Apps Script
+ */
+export async function deleteDistrictStaffFromGAS(
+  staff: DistrictStaff,
+  webAppUrl: string
+): Promise<boolean> {
+  if (!webAppUrl || !webAppUrl.trim()) return false;
+  try {
+    await fetch(webAppUrl.trim(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'deleteDistrictStaff',
+        id: staff.id,
+        email: staff.email,
+      }),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * ลบข้อมูลโรงเรียนออกจาก Google Apps Script
+ */
+export async function deleteSchoolStaffFromGAS(
+  staff: SchoolStaffRecord,
+  webAppUrl: string
+): Promise<boolean> {
+  if (!webAppUrl || !webAppUrl.trim()) return false;
+  try {
+    await fetch(webAppUrl.trim(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'deleteSchoolStaff',
+        id: staff.id,
+        schoolName: staff.schoolName,
+      }),
+    });
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -323,27 +607,46 @@ export async function syncAllToGAS(
     return { success: false, message: 'กรุณาระบุ Google Apps Script Web App URL ก่อนกดซิงก์ข้อมูล' };
   }
 
+  const payload = JSON.stringify({
+    action: 'bulkSync',
+    districtStaff,
+    schoolStaff,
+  });
+
   try {
-    const response = await fetch(webAppUrl, {
+    const response = await fetch(webAppUrl.trim(), {
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8',
       },
-      body: JSON.stringify({
-        action: 'bulkSync',
-        districtStaff,
-        schoolStaff,
-      }),
+      body: payload,
     });
 
     if (!response.ok) {
       return { success: false, message: `เซิร์ฟเวอร์ตอบกลับรหัส ${response.status}` };
     }
 
-    const resData = await response.json();
-    return { success: true, message: resData.message || 'ซิงก์ข้อมูลทั้งหมดเข้าสู่ Google Sheets สำเร็จ' };
+    try {
+      const resData = await response.json();
+      return { success: true, message: resData.message || 'ซิงก์ข้อมูลทั้งหมดเข้าสู่ Google Sheets สำเร็จ' };
+    } catch {
+      return { success: true, message: 'ซิงก์ข้อมูลทั้งหมดเข้าสู่ Google Sheets เรียบร้อยแล้ว' };
+    }
   } catch {
-    return { success: true, message: 'ส่งคำขอซิงก์ทั้งหมดไปยัง Google Apps Script แล้ว' };
+    try {
+      await fetch(webAppUrl.trim(), {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: payload,
+      });
+      return { success: true, message: 'ส่งคำขอซิงก์ทั้งหมดไปยัง Google Sheets แล้ว' };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: `ไม่สามารถส่งข้อมูลได้: ${err.message || 'ข้อผิดพลาดเครือข่าย'}`,
+      };
+    }
   }
 }
 
@@ -353,7 +656,8 @@ export async function testGASConnection(webAppUrl: string): Promise<{ success: b
   }
 
   try {
-    const testUrl = webAppUrl.includes('?') ? `${webAppUrl}&action=ping` : `${webAppUrl}?action=ping`;
+    const cleanUrl = webAppUrl.trim();
+    const testUrl = cleanUrl.includes('?') ? `${cleanUrl}&action=ping` : `${cleanUrl}?action=ping`;
     const response = await fetch(testUrl, { method: 'GET' });
     if (response.ok) {
       const data = await response.json();

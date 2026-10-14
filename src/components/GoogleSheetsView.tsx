@@ -20,6 +20,7 @@ interface GoogleSheetsViewProps {
   schoolStaffList: SchoolStaffRecord[];
   gasConfig: GASConfig;
   onRefreshFromServer: () => Promise<void>;
+  onRefreshFromGAS?: () => Promise<void>;
   onEditSchoolStaff: (staff: SchoolStaffRecord) => void;
   onEditDistrictStaff: (staff: DistrictStaff) => void;
   onDeleteSchoolStaff?: (id: string) => void;
@@ -31,6 +32,7 @@ export const GoogleSheetsView: React.FC<GoogleSheetsViewProps> = ({
   schoolStaffList,
   gasConfig,
   onRefreshFromServer,
+  onRefreshFromGAS,
   onEditSchoolStaff,
   onEditDistrictStaff,
   onDeleteSchoolStaff,
@@ -39,6 +41,7 @@ export const GoogleSheetsView: React.FC<GoogleSheetsViewProps> = ({
   const [activeSheet, setActiveSheet] = useState<'school' | 'district'>('school');
   const [searchTerm, setSearchTerm] = useState('');
   const [isSavingToFile, setIsSavingToFile] = useState(false);
+  const [isRefreshingGAS, setIsRefreshingGAS] = useState(false);
   const [saveBanner, setSaveBanner] = useState<string | null>(null);
   const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<{
     type: 'school' | 'district';
@@ -119,6 +122,31 @@ export const GoogleSheetsView: React.FC<GoogleSheetsViewProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {gasConfig.webAppUrl && onRefreshFromGAS && (
+              <button
+                onClick={async () => {
+                  setIsRefreshingGAS(true);
+                  try {
+                    await onRefreshFromGAS();
+                    setSaveBanner('ดึงข้อมูลล่าสุดจาก Google Sheets สำเร็จ!');
+                    setTimeout(() => setSaveBanner(null), 4000);
+                  } finally {
+                    setIsRefreshingGAS(false);
+                  }
+                }}
+                disabled={isRefreshingGAS}
+                className="px-4 py-2.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:bg-slate-400"
+                title="ดึงข้อมูลล่าสุดจาก Google Sheets (Cloud)"
+              >
+                {isRefreshingGAS ? (
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <RefreshCw className="w-3.5 h-3.5" />
+                )}
+                <span>ดึงข้อมูลล่าสุดจาก Google Sheets</span>
+              </button>
+            )}
+
             <button
               onClick={handleSaveToSystemFiles}
               disabled={isSavingToFile}
@@ -129,7 +157,7 @@ export const GoogleSheetsView: React.FC<GoogleSheetsViewProps> = ({
               ) : (
                 <Save className="w-4 h-4" />
               )}
-              <span>บันทึกลงไฟล์นี้เลย</span>
+              <span>บันทึกลงไฟล์ระบบ</span>
             </button>
 
             <button
@@ -143,7 +171,7 @@ export const GoogleSheetsView: React.FC<GoogleSheetsViewProps> = ({
             <button
               onClick={() => onRefreshFromServer()}
               className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all cursor-pointer"
-              title="โหลดข้อมูลล่าสุดจากไฟล์"
+              title="โหลดข้อมูลล่าสุด"
             >
               <RefreshCw className="w-4 h-4" />
             </button>

@@ -23,10 +23,14 @@ import {
   deleteDistrictStaffFromServer,
   deleteSchoolStaffFromServer,
   batchDeleteFromServer,
+  loadDataFromGAS,
+  deleteDistrictStaffFromGAS,
+  deleteSchoolStaffFromGAS,
+  isStaticHosting,
 } from './utils/gasService';
 import { ORGANIZATION_INFO } from './data/organization';
 import { ALL_SCHOOLS } from './data/schoolsData';
-import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, RefreshCw, ExternalLink, FileSpreadsheet } from 'lucide-react';
 
 export default function App() {
   // Navigation & Portal states
@@ -54,37 +58,42 @@ export default function App() {
   const [editingDistrictStaff, setEditingDistrictStaff] = useState<DistrictStaff | null>(null);
   const [isEditingFromAdmin, setIsEditingFromAdmin] = useState<boolean>(false);
 
-  // Load from server or localStorage on mount
+  const [isSyncingGAS, setIsSyncingGAS] = useState<boolean>(false);
+  const [gasSyncStatus, setGasSyncStatus] = useState<string | null>(null);
+
+  // Load from server, GAS, or localStorage on mount
   useEffect(() => {
     async function initData() {
+      const config = loadGASConfig();
+      setGasConfig(config);
+
+      // 1. Try server first (when running with Express backend)
       const serverData = await loadAllFromServer();
       if (serverData && (serverData.districtStaff.length > 0 || serverData.schoolStaff.length > 0)) {
         setDistrictStaffList(serverData.districtStaff);
         setSchoolStaffList(serverData.schoolStaff);
         saveDistrictStaffToStorage(serverData.districtStaff);
         saveSchoolStaffToStorage(serverData.schoolStaff);
-      } else if (serverData) {
-        // Server responded with clean empty lists
-        const dStaff = loadDistrictStaffFromStorage();
-        const sStaff = loadSchoolStaffFromStorage();
-        if (dStaff.length > 0 || sStaff.length > 0) {
-          setDistrictStaffList(dStaff);
-          setSchoolStaffList(sStaff);
-          syncAllToServer(dStaff, sStaff);
-        } else {
-          setDistrictStaffList([]);
-          setSchoolStaffList([]);
-          saveDistrictStaffToStorage([]);
-          saveSchoolStaffToStorage([]);
-        }
-      } else {
-        const dStaff = loadDistrictStaffFromStorage();
-        const sStaff = loadSchoolStaffFromStorage();
-        setDistrictStaffList(dStaff);
-        setSchoolStaffList(sStaff);
+        return;
       }
-      const config = loadGASConfig();
-      setGasConfig(config);
+
+      // 2. If running on GitHub Pages (or server is empty/offline) and Google Apps Script URL exists
+      if (config.webAppUrl) {
+        const gasData = await loadDataFromGAS(config.webAppUrl);
+        if (gasData && (gasData.districtStaff.length > 0 || gasData.schoolStaff.length > 0)) {
+          setDistrictStaffList(gasData.districtStaff);
+          setSchoolStaffList(gasData.schoolStaff);
+          saveDistrictStaffToStorage(gasData.districtStaff);
+          saveSchoolStaffToStorage(gasData.schoolStaff);
+          return;
+        }
+      }
+
+      // 3. Fallback to localStorage
+      const dStaff = loadDistrictStaffFromStorage();
+      const sStaff = loadSchoolStaffFromStorage();
+      setDistrictStaffList(dStaff);
+      setSchoolStaffList(sStaff);
     }
     initData();
   }, []);
@@ -96,6 +105,38 @@ export default function App() {
       setSchoolStaffList(serverData.schoolStaff);
       saveDistrictStaffToStorage(serverData.districtStaff);
       saveSchoolStaffToStorage(serverData.schoolStaff);
+      return;
+    }
+    // If server is not present (GitHub Pages), refresh from GAS
+    if (gasConfig.webAppUrl) {
+      await handleRefreshFromGAS();
+    }
+  };
+
+  const handleRefreshFromGAS = async () => {
+    if (!gasConfig.webAppUrl) {
+      setGasSyncStatus('ยังไม่ได้ระบุ Google Apps Script Web App URL');
+      setTimeout(() => setGasSyncStatus(null), 4000);
+      return;
+    }
+    setIsSyncingGAS(true);
+    setGasSyncStatus(null);
+    try {
+      const gasData = await loadDataFromGAS(gasConfig.webAppUrl);
+      if (gasData) {
+        setDistrictStaffList(gasData.districtStaff);
+        setSchoolStaffList(gasData.schoolStaff);
+        saveDistrictStaffToStorage(gasData.districtStaff);
+        saveSchoolStaffToStorage(gasData.schoolStaff);
+        setGasSyncStatus(`ดึงข้อมูลจาก Google Sheets สำเร็จ! (${gasData.districtStaff.length} ผู้ใช้งานเขต, ${gasData.schoolStaff.length} โรงเรียน)`);
+      } else {
+        setGasSyncStatus('ไม่สามารถดึงข้อมูลจาก Google Sheets ได้ โปรดตรวจสอบ Web App URL');
+      }
+    } catch {
+      setGasSyncStatus('เกิดข้อผิดพลาดในการเชื่อมต่อ Google Sheets');
+    } finally {
+      setIsSyncingGAS(false);
+      setTimeout(() => setGasSyncStatus(null), 5000);
     }
   };
 
@@ -142,41 +183,57 @@ export default function App() {
 
   // Delete actions (Admin only)
   const handleDeleteDistrictStaff = (id: string) => {
+    const itemToDelete = districtStaffList.find((s) => s.id === id);
     setDistrictStaffList((prev) => {
       const updated = prev.filter((s) => s.id !== id);
       saveDistrictStaffToStorage(updated);
       deleteDistrictStaffFromServer(id);
       return updated;
     });
+    if (gasConfig.webAppUrl && itemToDelete) {
+      deleteDistrictStaffFromGAS(itemToDelete, gasConfig.webAppUrl);
+    }
   };
 
   const handleDeleteSchoolStaff = (id: string) => {
+    const itemToDelete = schoolStaffList.find((s) => s.id === id);
     setSchoolStaffList((prev) => {
       const updated = prev.filter((s) => s.id !== id);
       saveSchoolStaffToStorage(updated);
       deleteSchoolStaffFromServer(id);
       return updated;
     });
+    if (gasConfig.webAppUrl && itemToDelete) {
+      deleteSchoolStaffFromGAS(itemToDelete, gasConfig.webAppUrl);
+    }
   };
 
   const handleBatchDeleteDistrictStaff = (ids: string[]) => {
     const idSet = new Set(ids);
+    const itemsToDelete = districtStaffList.filter((s) => idSet.has(s.id));
     setDistrictStaffList((prev) => {
       const updated = prev.filter((s) => !idSet.has(s.id));
       saveDistrictStaffToStorage(updated);
       batchDeleteFromServer('district', ids);
       return updated;
     });
+    if (gasConfig.webAppUrl) {
+      itemsToDelete.forEach((item) => deleteDistrictStaffFromGAS(item, gasConfig.webAppUrl));
+    }
   };
 
   const handleBatchDeleteSchoolStaff = (ids: string[]) => {
     const idSet = new Set(ids);
+    const itemsToDelete = schoolStaffList.filter((s) => idSet.has(s.id));
     setSchoolStaffList((prev) => {
       const updated = prev.filter((s) => !idSet.has(s.id));
       saveSchoolStaffToStorage(updated);
       batchDeleteFromServer('school', ids);
       return updated;
     });
+    if (gasConfig.webAppUrl) {
+      itemsToDelete.forEach((item) => deleteSchoolStaffFromGAS(item, gasConfig.webAppUrl));
+    }
   };
 
   const handleClearAllData = async () => {
@@ -260,6 +317,54 @@ export default function App() {
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+        {/* Banner for Google Sheets Sync Status */}
+        {gasSyncStatus && (
+          <div className="mb-4 bg-teal-50 border border-teal-300 rounded-xl p-3 flex items-center justify-between text-xs text-teal-900 animate-fadeIn">
+            <div className="flex items-center gap-2">
+              <FileSpreadsheet className="w-4 h-4 text-teal-700 shrink-0" />
+              <span className="font-semibold">{gasSyncStatus}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Cloud Google Sheets Mode Banner */}
+        {gasConfig.webAppUrl ? (
+          <div className="mb-4 bg-teal-50/70 border border-teal-200/80 rounded-xl px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 text-teal-900 font-medium">
+              <span className="w-2 h-2 rounded-full bg-teal-600 animate-pulse" />
+              <span>ระบบเชื่อมต่อบันทึกข้อมูลเข้า Google Sheets แบบ Cloud Database เรียบร้อยแล้ว</span>
+            </div>
+            <button
+              onClick={handleRefreshFromGAS}
+              disabled={isSyncingGAS}
+              className="flex items-center gap-1.5 font-bold text-teal-800 hover:text-teal-950 bg-white px-3 py-1.5 rounded-lg border border-teal-200 shadow-2xs hover:shadow-xs transition-all cursor-pointer self-start sm:self-auto disabled:opacity-60"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingGAS ? 'animate-spin' : ''}`} />
+              <span>{isSyncingGAS ? 'กำลังดึงข้อมูล...' : 'ดึงข้อมูลล่าสุดจาก Sheets'}</span>
+            </button>
+          </div>
+        ) : isStaticHosting() ? (
+          <div className="mb-4 bg-amber-50 border border-amber-300 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-amber-950">
+            <div className="flex items-center gap-2">
+              <span className="text-base">💡</span>
+              <span><strong>คำแนะนำ GitHub Pages:</strong> ต้องการให้ข้อมูลบันทึกลงใน Google Sheet เพื่อให้ทุกคนเห็นข้อมูลเดียวกัน โปรดตั้งค่า Web App URL ที่เมนู "ตั้งค่า Google Sheets" ในระบบหลังบ้าน หรือใส่ใน <code className="font-mono bg-amber-100 px-1 rounded">src/config/gasConfig.ts</code></span>
+            </div>
+            <button
+              onClick={() => {
+                if (isAdminLoggedIn) {
+                  setCurrentPortal('admin');
+                  setActiveAdminTab('gas-settings');
+                } else {
+                  setShowAdminLoginModal(true);
+                }
+              }}
+              className="px-3 py-1 bg-amber-700 hover:bg-amber-800 text-white rounded-lg font-bold text-xs shrink-0 cursor-pointer"
+            >
+              ไปตั้งค่า Google Sheets
+            </button>
+          </div>
+        ) : null}
+
         {/* Banner if editing from admin portal */}
         {isEditingFromAdmin && currentPortal === 'user' && (
           <div className="mb-4 bg-indigo-50 border border-indigo-200 rounded-xl p-3 flex items-center justify-between">
@@ -291,6 +396,7 @@ export default function App() {
             gasConfig={gasConfig}
             onUpdateGASConfig={handleUpdateGASConfig}
             onRefreshFromServer={handleRefreshFromServer}
+            onRefreshFromGAS={handleRefreshFromGAS}
             onDeleteDistrictStaff={handleDeleteDistrictStaff}
             onDeleteSchoolStaff={handleDeleteSchoolStaff}
             onBatchDeleteDistrictStaff={handleBatchDeleteDistrictStaff}
