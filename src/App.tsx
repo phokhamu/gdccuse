@@ -214,7 +214,12 @@ export default function App() {
   // Save changes to school staff
   const handleSaveSchoolStaff = (newOrUpdated: SchoolStaffRecord) => {
     setSchoolStaffList((prev) => {
-      const index = prev.findIndex((s) => s.id === newOrUpdated.id);
+      const index = prev.findIndex(
+        (s) =>
+          s.id === newOrUpdated.id ||
+          (newOrUpdated.schoolId && s.schoolId === newOrUpdated.schoolId) ||
+          (s.schoolName === newOrUpdated.schoolName)
+      );
       let updated: SchoolStaffRecord[];
       if (index >= 0) {
         updated = [...prev];

@@ -1,6 +1,6 @@
 import { DistrictStaff, SchoolStaffRecord, GASConfig } from '../types';
 import { DEFAULT_GAS_WEB_APP_URL } from '../config/gasConfig';
-import { ALL_SCHOOLS } from '../data/schoolsData';
+import { ALL_SCHOOLS, findOfficialSchool } from '../data/schoolsData';
 
 const STORAGE_KEY_DISTRICT = 'bkn_district_staff_v2';
 const STORAGE_KEY_SCHOOL = 'bkn_school_staff_v2';
@@ -95,6 +95,31 @@ export function saveDistrictStaffToStorage(data: DistrictStaff[]): void {
   }
 }
 
+/**
+ * ปรับปรุงข้อมูลโรงเรียนให้ตรงกับฐานข้อมูลทางการ (ป้องกันปัญหา schoolId เพี้ยน)
+ */
+export function normalizeSchoolStaffRecord(item: SchoolStaffRecord): SchoolStaffRecord {
+  const matched = findOfficialSchool({
+    schoolId: item.schoolId,
+    schoolName: item.schoolName,
+    clusterName: item.clusterName,
+    clusterId: item.clusterId,
+    documentPrefix: item.documentPrefix,
+  });
+
+  if (matched) {
+    return {
+      ...item,
+      schoolId: matched.id,
+      schoolName: matched.name,
+      clusterId: matched.clusterId,
+      clusterName: matched.clusterName,
+      documentPrefix: item.documentPrefix || matched.defaultDocPrefix || 'ศธ 04321/',
+    };
+  }
+  return item;
+}
+
 export function loadSchoolStaffFromStorage(): SchoolStaffRecord[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_SCHOOL);
@@ -104,11 +129,22 @@ export function loadSchoolStaffFromStorage(): SchoolStaffRecord[] {
 
     // Purge mock entries if first time on v2
     const filtered = filterOutSampleSchoolStaff(parsed);
-    if (localStorage.getItem(SAMPLE_PURGED_KEY) !== 'true') {
-      saveSchoolStaffToStorage(filtered);
+
+    // Normalize with official schools (fixes any legacy or mis-mapped records)
+    const normalized = filtered.map(normalizeSchoolStaffRecord);
+
+    // Deduplicate by schoolId (keep latest)
+    const bySchoolMap = new Map<string, SchoolStaffRecord>();
+    normalized.forEach((rec) => {
+      bySchoolMap.set(rec.schoolId, rec);
+    });
+    const uniqueList = Array.from(bySchoolMap.values());
+
+    if (localStorage.getItem(SAMPLE_PURGED_KEY) !== 'true' || uniqueList.length !== parsed.length) {
+      saveSchoolStaffToStorage(uniqueList);
       localStorage.setItem(SAMPLE_PURGED_KEY, 'true');
     }
-    return filtered;
+    return uniqueList;
   } catch {
     return [];
   }
@@ -116,7 +152,14 @@ export function loadSchoolStaffFromStorage(): SchoolStaffRecord[] {
 
 export function saveSchoolStaffToStorage(data: SchoolStaffRecord[]): void {
   try {
-    localStorage.setItem(STORAGE_KEY_SCHOOL, JSON.stringify(data));
+    const normalized = data.map(normalizeSchoolStaffRecord);
+    // Deduplicate by schoolId (keep latest)
+    const bySchoolMap = new Map<string, SchoolStaffRecord>();
+    normalized.forEach((rec) => {
+      bySchoolMap.set(rec.schoolId, rec);
+    });
+    const uniqueList = Array.from(bySchoolMap.values());
+    localStorage.setItem(STORAGE_KEY_SCHOOL, JSON.stringify(uniqueList));
   } catch (err) {
     console.error('Failed to save school staff to localStorage', err);
   }
@@ -359,7 +402,7 @@ function parseGASDistrictStaff(rawList: any[]): DistrictStaff[] {
 
 function parseGASSchoolStaff(rawList: any[]): SchoolStaffRecord[] {
   if (!Array.isArray(rawList)) return [];
-  return rawList
+  const cleanList = rawList
     .map((item, idx) => {
       let rec: Partial<SchoolStaffRecord> = {};
       if (Array.isArray(item)) {
@@ -468,21 +511,21 @@ function parseGASSchoolStaff(rawList: any[]): SchoolStaffRecord[] {
         }
       }
 
-      // Match with predefined official schools
-      const matchedSchool = ALL_SCHOOLS.find(
-        (s) =>
-          s.name === rec.schoolName ||
-          s.id === rec.schoolId ||
-          (rec.schoolName && s.name.includes(rec.schoolName)) ||
-          (rec.schoolName && rec.schoolName.includes(s.name.replace('โรงเรียน', '')))
-      );
+      // Match with predefined official schools using robust exact matching
+      const matchedSchool = findOfficialSchool({
+        schoolId: rec.schoolId || (typeof rec.id === 'string' && /^\d{8}$/.test(rec.id) ? rec.id : undefined),
+        schoolName: rec.schoolName,
+        clusterName: rec.clusterName,
+        clusterId: rec.clusterId,
+        documentPrefix: rec.documentPrefix,
+      });
 
       const fullRecord: SchoolStaffRecord = {
-        id: rec.id || `sch-${idx + 1}`,
-        schoolId: matchedSchool ? matchedSchool.id : `sch-custom-${idx + 1}`,
-        schoolName: rec.schoolName || (matchedSchool ? matchedSchool.name : 'โรงเรียนในเขต'),
-        clusterId: matchedSchool ? matchedSchool.clusterId : 'network-unknown',
-        clusterName: rec.clusterName || (matchedSchool ? matchedSchool.clusterName : 'ทั่วไป'),
+        id: rec.id || (matchedSchool ? `sch-${matchedSchool.id}` : `sch-${idx + 1}`),
+        schoolId: matchedSchool ? matchedSchool.id : (rec.schoolId || `sch-custom-${idx + 1}`),
+        schoolName: matchedSchool ? matchedSchool.name : (rec.schoolName || 'โรงเรียนในเขต'),
+        clusterId: matchedSchool ? matchedSchool.clusterId : (rec.clusterId || 'network-unknown'),
+        clusterName: matchedSchool ? matchedSchool.clusterName : (rec.clusterName || 'ทั่วไป'),
         documentPrefix: rec.documentPrefix || (matchedSchool ? (matchedSchool.defaultDocPrefix || 'ศธ 04321/') : 'ศธ 04321/'),
         directorPrefixTh: rec.directorPrefixTh || 'นาย',
         directorFirstNameTh: rec.directorFirstNameTh || '',
@@ -505,6 +548,13 @@ function parseGASSchoolStaff(rawList: any[]): SchoolStaffRecord[] {
       return fullRecord;
     })
     .filter((s) => s.schoolName && (s.directorFirstNameTh || s.clerkFirstNameTh || s.documentPrefix));
+
+  // Deduplicate by schoolId (keep latest record for each school)
+  const bySchoolMap = new Map<string, SchoolStaffRecord>();
+  cleanList.forEach((rec) => {
+    bySchoolMap.set(rec.schoolId, rec);
+  });
+  return Array.from(bySchoolMap.values());
 }
 
 /**
@@ -609,9 +659,14 @@ export async function sendSchoolStaffToGAS(
     return { success: true, message: 'บันทึกในระบบเรียบร้อย (ยังไม่ได้ตั้งค่า Google Apps Script Web App URL)' };
   }
 
+  const normalizedStaff = normalizeSchoolStaffRecord(staff);
   const payload = JSON.stringify({
     action: 'saveSchoolStaff',
-    data: staff,
+    data: {
+      ...normalizedStaff,
+      id: normalizedStaff.schoolId || normalizedStaff.id,
+      schoolId: normalizedStaff.schoolId,
+    },
   });
 
   try {

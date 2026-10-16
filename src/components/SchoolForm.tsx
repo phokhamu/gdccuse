@@ -119,11 +119,20 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
     return SCHOOL_CLUSTERS.find((c) => c.id === selectedClusterId);
   }, [selectedClusterId]);
 
-  // Check if this school has existing saved record
+  // Check if this school has existing saved record (match by schoolId or exact/clean name)
   const existingSchoolRecord = useMemo(() => {
-    if (!selectedSchoolId) return undefined;
-    return schoolStaffList.find((s) => s.schoolId === selectedSchoolId);
-  }, [selectedSchoolId, schoolStaffList]);
+    if (!selectedSchoolId && !currentSchool) return undefined;
+    const cleanCurrentName = currentSchool?.name.replace(/^โรงเรียน/, '').trim();
+    return schoolStaffList.find((s) => {
+      if (selectedSchoolId && s.schoolId === selectedSchoolId) return true;
+      if (currentSchool) {
+        if (s.schoolName === currentSchool.name) return true;
+        const cleanSName = s.schoolName?.replace(/^โรงเรียน/, '').trim();
+        if (cleanSName && cleanCurrentName && cleanSName === cleanCurrentName) return true;
+      }
+      return false;
+    });
+  }, [selectedSchoolId, currentSchool, schoolStaffList]);
 
   // When school changes, populate default or existing data
   useEffect(() => {
@@ -297,6 +306,7 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
     const dupCheck = checkSchoolStaffDuplicate(
       {
         schoolName: currentSchool.name,
+        schoolId: currentSchool.id,
         directorEmail,
         clerkEmail,
         id: existingSchoolRecord?.id,
@@ -311,7 +321,7 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
     }
 
     // Build School Record
-    const recordId = existingSchoolRecord?.id || `sch-${Date.now()}`;
+    const recordId = existingSchoolRecord?.id || `sch-${currentSchool.id}`;
     const newRecord: SchoolStaffRecord = {
       id: recordId,
       clusterId: currentSchool.clusterId,

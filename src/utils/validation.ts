@@ -67,6 +67,7 @@ export function checkDistrictStaffDuplicate(
 export function checkSchoolStaffDuplicate(
   candidate: {
     schoolName: string;
+    schoolId?: string;
     directorEmail?: string;
     clerkEmail?: string;
     id?: string;
@@ -74,18 +75,33 @@ export function checkSchoolStaffDuplicate(
   allSchoolStaff: SchoolStaffRecord[]
 ): DuplicateCheckResult {
   const targetSchool = candidate.schoolName.trim();
+  const cleanTargetName = targetSchool.replace(/^โรงเรียน/, '').trim();
+  const targetSchoolId = candidate.schoolId?.trim();
+  const currentRecordId = candidate.id?.trim();
 
-  // ตรวจสอบชื่อโรงเรียนซ้ำ
-  const existingSchool = allSchoolStaff.find(
-    (s) => s.id !== candidate.id && s.schoolName.trim() === targetSchool
-  );
+  // If candidate is already editing an existing record for this school (by record ID),
+  // it is an update, NOT a duplicate!
+  if (currentRecordId) {
+    const isEditingSelf = allSchoolStaff.some((s) => s.id === currentRecordId);
+    if (isEditingSelf) {
+      return { isDuplicate: false, message: '' };
+    }
+  }
 
-  if (existingSchool) {
+  // Otherwise check if a DIFFERENT record already exists for this school
+  const duplicateSchool = allSchoolStaff.find((s) => {
+    if (currentRecordId && s.id === currentRecordId) return false;
+    if (targetSchoolId && s.schoolId === targetSchoolId) return true;
+    const cleanSName = s.schoolName.replace(/^โรงเรียน/, '').trim();
+    return cleanSName === cleanTargetName || s.schoolName.trim() === targetSchool;
+  });
+
+  if (duplicateSchool) {
     return {
       isDuplicate: true,
       field: 'schoolName',
-      message: `โรงเรียน "${targetSchool}" ได้บันทึกข้อมูลไว้ในระบบแล้ว หากต้องการปรับปรุงข้อมูลกรุณากดแก้ไขจากรายการเดิม`,
-      existingRecord: existingSchool,
+      message: `โรงเรียน "${targetSchool}" ได้บันทึกข้อมูลไว้ในระบบแล้ว หากต้องการปรับปรุงข้อมูลกรุณายืนยันรหัสประจำโรงเรียนเพื่อเข้าดูและแก้ไข`,
+      existingRecord: duplicateSchool,
     };
   }
 

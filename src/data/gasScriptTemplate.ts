@@ -119,6 +119,7 @@ function doGet(e) {
       const schoolList = sRows.map(function(r, idx) {
         return {
           id: String(r[0] || ('sch-' + (idx + 1))),
+          schoolId: String(r[0] || ''),
           schoolName: String(r[1] || ''),
           documentPrefix: String(r[2] || ''),
           directorPrefixTh: String(r[3] || ''),
@@ -229,16 +230,24 @@ function doPost(e) {
       const existingRows = sheet.getDataRange().getValues();
 
       const targetSchool = String(data.schoolName || '').trim();
-      const targetId = String(data.id || data.schoolId || '').trim();
+      const cleanTargetSchool = targetSchool.replace(/^โรงเรียน/, '').trim();
+      const targetId = String(data.id || '').trim();
+      const targetSchoolId = String(data.schoolId || '').trim();
 
       // ตรวจสอบชื่อโรงเรียนหรือรหัสซ้ำเพื่ออัปเดต
       for (let i = 1; i < existingRows.length; i++) {
         const rowId = String(existingRows[i][0] || '').trim();
         const rowSchool = String(existingRows[i][1] || '').trim();
+        const cleanRowSchool = rowSchool.replace(/^โรงเรียน/, '').trim();
 
-        if ((targetId && rowId === targetId) || (targetSchool && rowSchool === targetSchool)) {
+        const isMatch =
+          (targetSchoolId && (rowId === targetSchoolId || rowSchool === targetSchoolId)) ||
+          (targetId && rowId === targetId) ||
+          (targetSchool && (rowSchool === targetSchool || (cleanRowSchool && cleanRowSchool === cleanTargetSchool)));
+
+        if (isMatch) {
           sheet.getRange(i + 1, 1, 1, 19).setValues([[
-            rowId || targetId || ('sch-' + i),
+            targetSchoolId || rowId || targetId || ('sch-' + i),
             data.schoolName || '',
             data.documentPrefix || 'ศธ 04321/',
             data.directorPrefixTh || '',
@@ -264,7 +273,7 @@ function doPost(e) {
 
       // ถ้าไม่มีซ้ำ ให้เพิ่มแถวใหม่
       sheet.appendRow([
-        targetId || ('sch-' + Date.now()),
+        targetSchoolId || targetId || ('sch-' + Date.now()),
         data.schoolName || '',
         data.documentPrefix || 'ศธ 04321/',
         data.directorPrefixTh || '',

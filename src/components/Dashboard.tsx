@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ALL_SCHOOLS, SCHOOL_CLUSTERS } from '../data/schoolsData';
+import { ALL_SCHOOLS, SCHOOL_CLUSTERS, findOfficialSchool } from '../data/schoolsData';
 import { DISTRICT_DEPARTMENTS, ORGANIZATION_INFO } from '../data/organization';
 import { SchoolStaffRecord, DistrictStaff, GASConfig, SchoolInfo } from '../types';
 import { SchoolSmisModal } from './SchoolSmisModal';
@@ -81,11 +81,25 @@ export const Dashboard: React.FC<DashboardProps> = ({
     });
 
     schoolStaffList.forEach((st) => {
+      // Find matching official school by schoolId OR schoolName using robust matching
+      const matched =
+        ALL_SCHOOLS.find((s) => s.id === st.schoolId) ||
+        findOfficialSchool({
+          schoolId: st.schoolId,
+          schoolName: st.schoolName,
+          clusterName: st.clusterName,
+          clusterId: st.clusterId,
+          documentPrefix: st.documentPrefix,
+        });
+
+      const targetSchoolId = matched ? matched.id : st.schoolId;
+      if (!targetSchoolId) return;
+
       const hasDirector = Boolean(st.directorFirstNameTh && st.directorFirstNameTh.trim());
       const hasClerk = Boolean(st.clerkFirstNameTh && st.clerkFirstNameTh.trim());
       const count = (hasDirector ? 1 : 0) + (hasClerk ? 1 : 0);
 
-      map.set(st.schoolId, {
+      map.set(targetSchoolId, {
         record: st,
         directorName: hasDirector
           ? `${st.directorPrefixTh}${st.directorFirstNameTh} ${st.directorLastNameTh}`
