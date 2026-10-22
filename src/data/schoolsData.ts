@@ -325,43 +325,31 @@ export function findOfficialSchool(identifier: {
   if (!identifier) return undefined;
 
   const rawSchoolId = String(identifier.schoolId || '').trim();
+  const cleanId = rawSchoolId.replace(/^sch-/, '').trim();
   const rawName = String(identifier.schoolName || '').trim();
   const cleanName = rawName.replace(/^โรงเรียน/, '').trim();
   const rawCluster = String(identifier.clusterName || '').trim();
+  const targetClusterId = String(identifier.clusterId || '').trim();
 
-  // 1. If SMIS Code (8 digits) matches AND school name matches or is not provided
-  if (rawSchoolId && /^\d{8}$/.test(rawSchoolId)) {
-    const byId = ALL_SCHOOLS.find((s) => s.id === rawSchoolId);
-    if (byId) {
-      if (!rawName || byId.name === rawName || byId.name.replace(/^โรงเรียน/, '').trim() === cleanName) {
-        return byId;
-      }
-    }
+  // 1. Strict SMIS Code (8 digits) match - SMIS is 100% unique per school
+  if (/^\d{8}$/.test(cleanId)) {
+    const byId = ALL_SCHOOLS.find((s) => s.id === cleanId);
+    if (byId) return byId;
   }
 
   // 2. Exact match by school name AND cluster (resolves duplicate school names like บ้านโคกสะอาด, บ้านหนองจิก)
-  if (rawName && rawCluster) {
-    const byNameAndCluster = ALL_SCHOOLS.find(
-      (s) =>
-        (s.name === rawName || s.name.replace(/^โรงเรียน/, '').trim() === cleanName) &&
-        (s.clusterName === rawCluster || s.clusterName.includes(rawCluster) || rawCluster.includes(s.clusterName))
-    );
+  if (rawName && (rawCluster || targetClusterId)) {
+    const byNameAndCluster = ALL_SCHOOLS.find((s) => {
+      const nameMatch = s.name === rawName || s.name.replace(/^โรงเรียน/, '').trim() === cleanName;
+      if (!nameMatch) return false;
+      if (targetClusterId && s.clusterId === targetClusterId) return true;
+      if (rawCluster && (s.clusterName === rawCluster || s.clusterName.includes(rawCluster) || rawCluster.includes(s.clusterName))) return true;
+      return false;
+    });
     if (byNameAndCluster) return byNameAndCluster;
   }
 
-  // 3. Exact match by school name (full match)
-  if (rawName) {
-    const byExactName = ALL_SCHOOLS.find((s) => s.name === rawName);
-    if (byExactName) return byExactName;
-
-    // 4. Exact match after stripping 'โรงเรียน' prefix
-    const byCleanName = ALL_SCHOOLS.find(
-      (s) => s.name.replace(/^โรงเรียน/, '').trim() === cleanName
-    );
-    if (byCleanName) return byCleanName;
-  }
-
-  // 5. Match by document prefix number e.g. 'ศธ 04321.052/'
+  // 3. Match by document prefix number e.g. 'ศธ 04321.052/' (matches last 3 digits of SMIS code)
   if (identifier.documentPrefix && rawName) {
     const match = identifier.documentPrefix.match(/\.(\d{3})\//);
     if (match) {
@@ -369,16 +357,21 @@ export function findOfficialSchool(identifier: {
       const byPrefixAndName = ALL_SCHOOLS.find(
         (s) =>
           s.id.endsWith(code3) &&
-          s.name.replace(/^โรงเรียน/, '').trim() === cleanName
+          (s.name === rawName || s.name.replace(/^โรงเรียน/, '').trim() === cleanName)
       );
       if (byPrefixAndName) return byPrefixAndName;
     }
   }
 
-  // 6. Fallback to SMIS ID if name had no match
-  if (rawSchoolId && /^\d{8}$/.test(rawSchoolId)) {
-    const byId = ALL_SCHOOLS.find((s) => s.id === rawSchoolId);
-    if (byId) return byId;
+  // 4. Exact match by school name ONLY IF the name is unique in ALL_SCHOOLS
+  // If multiple schools share the same name (e.g. บ้านโคกสะอาด, บ้านหนองจิก), never guess blindly!
+  if (rawName) {
+    const matchingSchools = ALL_SCHOOLS.filter(
+      (s) => s.name === rawName || s.name.replace(/^โรงเรียน/, '').trim() === cleanName
+    );
+    if (matchingSchools.length === 1) {
+      return matchingSchools[0];
+    }
   }
 
   return undefined;

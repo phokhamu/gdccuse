@@ -233,17 +233,34 @@ function doPost(e) {
       const cleanTargetSchool = targetSchool.replace(/^โรงเรียน/, '').trim();
       const targetId = String(data.id || '').trim();
       const targetSchoolId = String(data.schoolId || '').trim();
+      const targetCluster = String(data.clusterName || '').trim();
 
-      // ตรวจสอบชื่อโรงเรียนหรือรหัสซ้ำเพื่ออัปเดต
+      // ตรวจสอบชื่อโรงเรียนหรือรหัสซ้ำเพื่ออัปเดต (ป้องกันการเขียนทับข้ามโรงเรียนที่ชื่อเหมือนกัน)
       for (let i = 1; i < existingRows.length; i++) {
         const rowId = String(existingRows[i][0] || '').trim();
         const rowSchool = String(existingRows[i][1] || '').trim();
         const cleanRowSchool = rowSchool.replace(/^โรงเรียน/, '').trim();
+        const rowCluster = String(existingRows[i][17] || '').trim();
 
-        const isMatch =
-          (targetSchoolId && (rowId === targetSchoolId || rowSchool === targetSchoolId)) ||
-          (targetId && rowId === targetId) ||
-          (targetSchool && (rowSchool === targetSchool || (cleanRowSchool && cleanRowSchool === cleanTargetSchool)));
+        // 1. ตรวจสอบรหัส SMIS หรือ Record ID ตรงกันแบบเคร่งครัด
+        let isMatch = false;
+        if (targetSchoolId && (rowId === targetSchoolId || rowId === ('sch-' + targetSchoolId))) {
+          isMatch = true;
+        } else if (targetId && (rowId === targetId || rowId === ('sch-' + targetId))) {
+          isMatch = true;
+        } else if (targetSchool && (rowSchool === targetSchool || (cleanRowSchool && cleanRowSchool === cleanTargetSchool))) {
+          // หากรหัส SMIS ทั้งสองฝั่งมีค่าและไม่ตรงกัน ห้ามถือว่าเป็นโรงเรียนเดียวกัน
+          const isRowId8Digits = /^\d{8}$/.test(rowId.replace(/^sch-/, ''));
+          const isTargetId8Digits = /^\d{8}$/.test(targetSchoolId.replace(/^sch-/, ''));
+          if (isRowId8Digits && isTargetId8Digits && rowId.replace(/^sch-/, '') !== targetSchoolId.replace(/^sch-/, '')) {
+            isMatch = false;
+          } else if (targetCluster && rowCluster && targetCluster !== rowCluster) {
+            // หากกลุ่มโรงเรียนต่างกัน ห้ามถือว่าเป็นโรงเรียนเดียวกัน (แก้ปัญหาชื่อโรงเรียนซ้ำกันในคนละกลุ่ม)
+            isMatch = false;
+          } else {
+            isMatch = true;
+          }
+        }
 
         if (isMatch) {
           sheet.getRange(i + 1, 1, 1, 19).setValues([[
@@ -319,14 +336,29 @@ function doPost(e) {
     // 4. ลบข้อมูลโรงเรียน
     if (action === 'deleteSchoolStaff') {
       const targetId = String(payload.id || '').trim();
+      const targetSchoolId = String(payload.schoolId || '').trim();
       const targetSchool = String(payload.schoolName || '').trim().toLowerCase();
+      const targetCluster = String(payload.clusterName || '').trim().toLowerCase();
       const sheet = ss.getSheetByName(SCHOOL_SHEET_NAME);
       if (sheet) {
         const rows = sheet.getDataRange().getValues();
         for (let i = rows.length - 1; i >= 1; i--) {
           const rowId = String(rows[i][0] || '').trim();
           const rowSchool = String(rows[i][1] || '').trim().toLowerCase();
-          if ((targetId && rowId === targetId) || (targetSchool && rowSchool === targetSchool)) {
+          const rowCluster = String(rows[i][17] || '').trim().toLowerCase();
+
+          let isMatch = false;
+          if (targetSchoolId && (rowId === targetSchoolId || rowId === ('sch-' + targetSchoolId))) {
+            isMatch = true;
+          } else if (targetId && rowId === targetId) {
+            isMatch = true;
+          } else if (targetSchool && rowSchool === targetSchool) {
+            if (!targetCluster || !rowCluster || targetCluster === rowCluster) {
+              isMatch = true;
+            }
+          }
+
+          if (isMatch) {
             sheet.deleteRow(i + 1);
             return createJsonResponse({ status: 'success', message: 'ลบรายการออกจาก Google Sheets เรียบร้อยแล้ว' });
           }

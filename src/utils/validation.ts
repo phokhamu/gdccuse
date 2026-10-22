@@ -68,6 +68,8 @@ export function checkSchoolStaffDuplicate(
   candidate: {
     schoolName: string;
     schoolId?: string;
+    clusterId?: string;
+    clusterName?: string;
     directorEmail?: string;
     clerkEmail?: string;
     id?: string;
@@ -78,6 +80,8 @@ export function checkSchoolStaffDuplicate(
   const cleanTargetName = targetSchool.replace(/^โรงเรียน/, '').trim();
   const targetSchoolId = candidate.schoolId?.trim();
   const currentRecordId = candidate.id?.trim();
+  const targetClusterId = candidate.clusterId?.trim();
+  const targetClusterName = candidate.clusterName?.trim();
 
   // If candidate is already editing an existing record for this school (by record ID),
   // it is an update, NOT a duplicate!
@@ -88,12 +92,30 @@ export function checkSchoolStaffDuplicate(
     }
   }
 
-  // Otherwise check if a DIFFERENT record already exists for this school
+  // Check if a DIFFERENT record already exists for this exact school
   const duplicateSchool = allSchoolStaff.find((s) => {
     if (currentRecordId && s.id === currentRecordId) return false;
-    if (targetSchoolId && s.schoolId === targetSchoolId) return true;
-    const cleanSName = s.schoolName.replace(/^โรงเรียน/, '').trim();
-    return cleanSName === cleanTargetName || s.schoolName.trim() === targetSchool;
+
+    // 1. If both records have schoolId (8-digit SMIS code):
+    // SMIS is the strict unique key for schools
+    if (targetSchoolId && s.schoolId) {
+      return s.schoolId === targetSchoolId;
+    }
+
+    // 2. If schoolId is not present on one of them, check name + cluster
+    const cleanSName = s.schoolName ? s.schoolName.replace(/^โรงเรียน/, '').trim() : '';
+    const isNameMatch = cleanSName === cleanTargetName || s.schoolName?.trim() === targetSchool;
+    if (!isNameMatch) return false;
+
+    // Name matches, but if clusters are known and different, they are DIFFERENT schools!
+    if (targetClusterId && s.clusterId && targetClusterId !== s.clusterId) {
+      return false;
+    }
+    if (targetClusterName && s.clusterName && targetClusterName !== s.clusterName) {
+      return false;
+    }
+
+    return true;
   });
 
   if (duplicateSchool) {

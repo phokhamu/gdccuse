@@ -119,20 +119,35 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
     return SCHOOL_CLUSTERS.find((c) => c.id === selectedClusterId);
   }, [selectedClusterId]);
 
-  // Check if this school has existing saved record (match by schoolId or exact/clean name)
+  // Check if this school has existing saved record (match strictly by schoolId / SMIS or exact cluster + name)
   const existingSchoolRecord = useMemo(() => {
     if (!selectedSchoolId && !currentSchool) return undefined;
+    const targetId = selectedSchoolId || currentSchool?.id;
     const cleanCurrentName = currentSchool?.name.replace(/^โรงเรียน/, '').trim();
     return schoolStaffList.find((s) => {
-      if (selectedSchoolId && s.schoolId === selectedSchoolId) return true;
+      // 1. Strict SMIS code or record ID match
+      if (targetId && (s.schoolId === targetId || s.id === targetId || s.id === `sch-${targetId}`)) return true;
+      // If s has a schoolId and it does not match targetId, never match across different schools
+      if (targetId && s.schoolId && s.schoolId !== targetId) return false;
+
+      // 2. Fallback to name match only if cluster matches
       if (currentSchool) {
-        if (s.schoolName === currentSchool.name) return true;
-        const cleanSName = s.schoolName?.replace(/^โรงเรียน/, '').trim();
-        if (cleanSName && cleanCurrentName && cleanSName === cleanCurrentName) return true;
+        const isNameMatch =
+          s.schoolName === currentSchool.name ||
+          (cleanCurrentName && s.schoolName?.replace(/^โรงเรียน/, '').trim() === cleanCurrentName);
+        if (isNameMatch) {
+          if (s.clusterId && currentSchool.clusterId && s.clusterId !== currentSchool.clusterId) {
+            return false;
+          }
+          if (s.clusterName && currentCluster?.name && s.clusterName !== currentCluster.name) {
+            return false;
+          }
+          return true;
+        }
       }
       return false;
     });
-  }, [selectedSchoolId, currentSchool, schoolStaffList]);
+  }, [selectedSchoolId, currentSchool, schoolStaffList, currentCluster]);
 
   // When school changes, populate default or existing data
   useEffect(() => {
@@ -307,6 +322,8 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
       {
         schoolName: currentSchool.name,
         schoolId: currentSchool.id,
+        clusterId: currentSchool.clusterId,
+        clusterName: currentSchool.clusterName,
         directorEmail,
         clerkEmail,
         id: existingSchoolRecord?.id,

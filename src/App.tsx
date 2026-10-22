@@ -214,12 +214,22 @@ export default function App() {
   // Save changes to school staff
   const handleSaveSchoolStaff = (newOrUpdated: SchoolStaffRecord) => {
     setSchoolStaffList((prev) => {
-      const index = prev.findIndex(
-        (s) =>
-          s.id === newOrUpdated.id ||
-          (newOrUpdated.schoolId && s.schoolId === newOrUpdated.schoolId) ||
-          (s.schoolName === newOrUpdated.schoolName)
-      );
+      const index = prev.findIndex((s) => {
+        // 1. Match by unique ID or SMIS schoolId
+        if (s.id === newOrUpdated.id) return true;
+        if (newOrUpdated.schoolId && s.schoolId && s.schoolId === newOrUpdated.schoolId) return true;
+
+        // If both have a schoolId and they differ, they are strictly different schools!
+        if (newOrUpdated.schoolId && s.schoolId && s.schoolId !== newOrUpdated.schoolId) return false;
+
+        // 2. Fallback to schoolName ONLY if clusters match
+        if (s.schoolName === newOrUpdated.schoolName) {
+          if (newOrUpdated.clusterId && s.clusterId && s.clusterId !== newOrUpdated.clusterId) return false;
+          if (newOrUpdated.clusterName && s.clusterName && s.clusterName !== newOrUpdated.clusterName) return false;
+          return true;
+        }
+        return false;
+      });
       let updated: SchoolStaffRecord[];
       if (index >= 0) {
         updated = [...prev];

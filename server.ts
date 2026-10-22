@@ -83,7 +83,7 @@ app.post('/api/save/school', (req, res) => {
   }
 
   const list: any[] = readJsonFile(SCHOOL_FILE, []);
-  const idx = list.findIndex((item) => item.id === staff.id);
+  const idx = list.findIndex((item) => item.id === staff.id || (staff.schoolId && item.schoolId === staff.schoolId));
   if (idx >= 0) {
     list[idx] = { ...list[idx], ...staff, updatedAt: new Date().toLocaleString('th-TH') };
   } else {

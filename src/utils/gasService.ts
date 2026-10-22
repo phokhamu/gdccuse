@@ -100,7 +100,7 @@ export function saveDistrictStaffToStorage(data: DistrictStaff[]): void {
  */
 export function normalizeSchoolStaffRecord(item: SchoolStaffRecord): SchoolStaffRecord {
   const matched = findOfficialSchool({
-    schoolId: item.schoolId,
+    schoolId: item.schoolId || item.id,
     schoolName: item.schoolName,
     clusterName: item.clusterName,
     clusterId: item.clusterId,
@@ -513,7 +513,7 @@ function parseGASSchoolStaff(rawList: any[]): SchoolStaffRecord[] {
 
       // Match with predefined official schools using robust exact matching
       const matchedSchool = findOfficialSchool({
-        schoolId: rec.schoolId || (typeof rec.id === 'string' && /^\d{8}$/.test(rec.id) ? rec.id : undefined),
+        schoolId: rec.schoolId || (typeof rec.id === 'string' ? rec.id : undefined),
         schoolName: rec.schoolName,
         clusterName: rec.clusterName,
         clusterId: rec.clusterId,
@@ -750,7 +750,9 @@ export async function deleteSchoolStaffFromGAS(
       body: JSON.stringify({
         action: 'deleteSchoolStaff',
         id: staff.id,
+        schoolId: staff.schoolId,
         schoolName: staff.schoolName,
+        clusterName: staff.clusterName,
       }),
     });
     return true;
